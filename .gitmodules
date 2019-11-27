@@ -1,0 +1,3 @@
+[submodule "grafana-influxdb-docker"]
+	path = grafana-influxdb-docker
+	url = https://github.com/JIexa24/grafana-influxdb-docker
