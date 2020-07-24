@@ -1,0 +1,1 @@
+@reboot root mags -r report -e reboot

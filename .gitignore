@@ -1,0 +1,12 @@
+/bin
+/msg
+/rails
+/*.rb
+/*.pid
+/*.yml
+/*.json
+/*.env
+/.ruby-version
+/hosts.dat
+/etc/mags.conf
+/replicate.sh
