@@ -7,15 +7,9 @@
   host_cnt = 1
   hex_len = 10
   message_path = "/usr/local/mags/msg"
+  is_server = false
+  interval = 10
   
-# [database]
-#   type = "mysql"
-#   host = "localhost"
-#   port = 3306
-#   dbname = "default"
-#   user = "user"
-#   password = "password"
-
 # [channels.TgSibnet]
 #   address = "localhost"
 #   port = 1
@@ -34,6 +28,3 @@
 #   from = "mags@hostname"
 #   to = ["username@domain.com"]
 #   disabled = false
-  
-# [sectors.sector1]
-#   hosts = ["hostname"]

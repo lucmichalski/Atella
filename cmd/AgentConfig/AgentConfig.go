@@ -8,6 +8,7 @@ import (
 	_ "net/http"
 	_ "net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,16 +20,21 @@ import (
 	"github.com/influxdata/toml/ast"
 )
 
+type VectorType struct {
+	Status  bool     `json:"status"`
+	Sectors []string `json:"sectors"`
+}
+
 var (
 	sectionDefaults = []string{"agent"}
-	envVarRegex = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
+	envVarRegex     = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
 
 	envVarEscaper = strings.NewReplacer(
 		`"`, `\"`,
 		`\`, `\\`,
 	)
-	Pid    int             = 0
-	Vector map[string]bool = make(map[string]bool, 0)
+	Pid    int                   = 0
+	Vector map[string]VectorType = make(map[string]VectorType, 0)
 )
 
 type AgentConfig struct {
@@ -40,6 +46,8 @@ type AgentConfig struct {
 	HostCnt      int64  `json:"host_cnt"`
 	HexLen       int64  `json:"hex_len"`
 	MessagePath  string `json:"message_path"`
+	IsServer     bool   `json:"is_server"`
+	Interval     int64  `json:"interval"`
 }
 
 type DatabaseConfig struct {
@@ -63,8 +71,8 @@ type SectorConfig struct {
 type Config struct {
 	Agent    *AgentConfig               `json:"AgentSection"`
 	Channels map[string]*ChannelsConfig `json:"ChannelsSection"`
-	Sectors []*SectorsConfig `json:"SectorsSection"`
-	DB      *DatabaseConfig  `json:"DatabaseSection"`
+	Sectors  []*SectorsConfig           `json:"SectorsSection"`
+	DB       *DatabaseConfig            `json:"DatabaseSection"`
 }
 
 func NewConfig() *Config {
@@ -78,15 +86,9 @@ func NewConfig() *Config {
 			HostCnt:      1,
 			HexLen:       10,
 			MessagePath:  "/usr/local/mags/msg"},
-		DB: &DatabaseConfig{
-			Type:     "mariadb",
-			Host:     "localhost",
-			Port:     3306,
-			Dbname:   "default",
-			User:     "user",
-			Password: "password"},
+		DB:       &DatabaseConfig{},
 		Channels: make(map[string]*ChannelsConfig),
-		Sectors: make([]*SectorsConfig, 0)}
+		Sectors:  make([]*SectorsConfig, 0)}
 	return local
 }
 
@@ -123,6 +125,38 @@ func GetJsonVector() []byte {
 	return res
 }
 
+func (c *Config) LoadDirectory(path string) error {
+  var err error = nil
+	if path == "" {
+		if path, err = getDefaultConfigDir(); err != nil {
+			return err
+		}
+	}
+	walkfn := func(thispath string, info os.FileInfo, _ error) error {
+		if info == nil {
+			Logger.LogWarning(fmt.Sprintf("I don't have permissions to read %s", thispath))
+			return nil
+		}
+
+		if info.IsDir() {
+			if strings.HasPrefix(info.Name(), "..") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		name := info.Name()
+		if len(name) < 6 || name[len(name)-5:] != ".conf" {
+			return nil
+		}
+		err := c.LoadConfig(thispath)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	return filepath.Walk(path, walkfn)
+}
+
 func getDefaultConfigPath() (string, error) {
 	envfile := os.Getenv("MAGS_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.mags/mags.conf")
@@ -139,6 +173,22 @@ func getDefaultConfigPath() (string, error) {
 		" in $MAGS_CONFIG_PATH, %s, or %s", homefile, etcfile)
 }
 
+func getDefaultConfigDir() (string, error) {
+	envdir := os.Getenv("MAGS_CONFIG_DIR")
+	homedir := os.ExpandEnv("${HOME}/.mags/conf.d")
+	etcdir := "/etc/mags/conf.d"
+
+	for _, path := range []string{envdir, homedir, etcdir} {
+		if _, err := os.Stat(path); err == nil {
+			Logger.LogSystem(fmt.Sprintf("Using config file: %s", path))
+			return path, nil
+		}
+	}
+
+	return "", fmt.Errorf("No config dir specified, and could not find one"+
+		" in $MAGS_CONFIG_DIR, %s, or %s", homedir, etcdir)
+}
+
 func (c *Config) LoadConfig(path string) error {
 	var err error
 	if path == "" {
@@ -146,6 +196,7 @@ func (c *Config) LoadConfig(path string) error {
 			return err
 		}
 	}
+
 	data, err := loadConfig(path)
 	if err != nil {
 		return fmt.Errorf("Error loading %s, %s", path, err)

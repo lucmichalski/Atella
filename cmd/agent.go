@@ -22,6 +22,7 @@ var (
 	reportMessage  string                    = "Test"
 	reportType     string                    = "Test"
 	configFilePath string                    = ""
+	configDirPath  string                    = ""
 	logLevel       int64                     = 0
 	pidFilePath    string                    = "./agent.pid"
 	target         string                    = "all"
@@ -55,30 +56,39 @@ func usage() {
 // Function initialize application runtime flags.
 func initFlags() {
 	flag.Usage = usage
-	flag.StringVar(&configFilePath, "c", "",
+	flag.StringVar(&configFilePath, "config", "",
 		"Path to config")
-	flag.StringVar(&runMode, "r", "Distributed",
+	flag.StringVar(&configDirPath, "configdir", "",
+		"Path to config directory")
+	flag.StringVar(&runMode, "runmode", "Distributed",
 		"Run mode. Possible values:\n\t"+
 			"Distributed\n\t"+
 			"Send\n\t"+
 			"Report\n")
-	flag.StringVar(&reportMessage, "m", "Test",
+	flag.StringVar(&reportMessage, "msg", "Test",
 		"Message. Work only with run mode \"Report\" & report type \"Custom\"")
-	flag.StringVar(&reportType, "e", "Test",
+	flag.StringVar(&reportType, "mode", "Test",
 		"Report mode. Possible values:\n\t"+
 			"Reboot\n\t"+
 			"Custom\n")
-	flag.StringVar(&target, "t", "all",
+	flag.StringVar(&target, "target", "all",
 		"Report target. Possible values:\n\t"+
 			"All\n\t"+
+			"Tgsibnet\n\t"+
+			"Mail\n\t"+
 			"Graphite\n")
 	flag.Parse()
 }
 
 func main() {
+	var err error = nil
 	initFlags()
 	conf = AgentConfig.NewConfig()
-	err := conf.LoadConfig(configFilePath)
+	err = conf.LoadConfig(configFilePath)
+	if err != nil {
+		Logger.LogFatal(fmt.Sprintf("%s", err))
+	}
+	err = conf.LoadDirectory(configDirPath)
 	if err != nil {
 		Logger.LogFatal(fmt.Sprintf("%s", err))
 	}

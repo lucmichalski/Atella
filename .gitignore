@@ -8,5 +8,6 @@
 /*.env
 /.ruby-version
 /hosts.dat
-/etc/mags.conf
+/etc/*.conf
+/etc/conf.d/*.conf
 /replicate.sh
