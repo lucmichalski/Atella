@@ -31,18 +31,21 @@ var (
 
 func handle(c chan os.Signal) {
 	for {
-		<-c
-		// mutex.Lock()
-		// mutex.Unlock()
-		err := conf.LoadConfig(configFilePath)
-		if err != nil {
-			Logger.LogFatal(fmt.Sprintf("%s", err))
+		sig := <-c
+		Logger.LogSystem(fmt.Sprintf("Receive %s", sig))
+		switch sig.String() {
+		case "hangup":
+			err := conf.LoadConfig(configFilePath)
+			if err != nil {
+				Logger.LogFatal(fmt.Sprintf("%s", err))
+			}
+			conf.Init()
+			conf.PrintJsonConfig()
+			client.Reload(conf)
+			Database.Reload(conf)
+			Logger.LogSystem("Reloaded")
+		default:
 		}
-		conf.Init()
-		conf.PrintJsonConfig()
-		client.Reload(conf)
-		Database.Reload(conf)
-		Logger.LogSystem("Reload")
 	}
 }
 
@@ -116,6 +119,7 @@ func main() {
 	conf.SavePid()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP)
+	// signal.Notify(c, syscall.SIGINT)
 	go handle(c)
 	server := AgentServer.New(conf, "0.0.0.0:5223")
 

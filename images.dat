@@ -1,7 +1,7 @@
 IMAGES=(
   grafana 7.0.3 7.0.3 "grafana/grafana:7.1.0"
-  influx 1.6.4-1+b22 1.6.4 "r9odt/influx:1.6.4"
+  influx 1.6.4-1+b22 1.6.4 "influxdb:1.7.10"
   telegraf 1.14.1 1.14.1 "r9odt/telegraf:1.14.1"
   mariadb 1:10.1.44-0ubuntu0.18.04.1 10.1 "mariadb:10.5.4"
-  clickhouse 20.4.2.9 20.4.2.9 "yandex/clickhouse-server:20.4"
+  clickhouse 20.4.2.9 20.4.2.9 "yandex/clickhouse-server:20.5.3.27"
 )

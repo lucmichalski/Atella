@@ -25,7 +25,9 @@ func Init(c *AgentConfig.Config) {
 }
 
 func Reload(c *AgentConfig.Config) {
-	base.Close()
+	if base != nil {
+		base.Close()
+	}
 	conf = c
 	if conf.DB.Type != "" {
 		Logger.LogInfo(fmt.Sprintf("Reload db with [%s:%s@%s:%d/%s",
