@@ -7,7 +7,7 @@
   host_cnt = 1
   hex_len = 10
   message_path = "/usr/local/mags/msg"
-  is_server = false
+  master = false
   interval = 10
   
 # [channels.TgSibnet]

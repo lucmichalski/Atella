@@ -42,7 +42,7 @@ func (c *ServerClient) Close() error {
 	return c.conn.Close()
 }
 
-/* Run client */
+// Run client
 func (c *ServerClient) Run() {
 	var (
 		err                   error    = nil
@@ -61,6 +61,9 @@ func (c *ServerClient) Run() {
 			StopReply = true
 		} else {
 			currentNeighboursAddr = c.neighbours[currenеNeighboursInd]
+			if currenеNeighboursInd == 0 {
+				c.insertVector()
+			}
 			if !StopRequest {
 				c.conn, err = net.Dial("tcp", fmt.Sprintf("%s:5223",
 					currentNeighboursAddr))
@@ -122,7 +125,7 @@ func (c *ServerClient) Run() {
 
 }
 
-/* Init client */
+// Init client 
 func New(c *AgentConfig.Config) *ServerClient {
 	client := &ServerClient{}
 	client.init(c)
@@ -150,7 +153,7 @@ func (client *ServerClient) Reload(c *AgentConfig.Config) {
 	Logger.LogSystem("Client reloaded")
 }
 
-/* Get sector index */
+// Function find and return sector index 
 func (c *ServerClient) GetSector() {
 	var (
 		sector     []int64 = []int64{}
@@ -160,7 +163,7 @@ func (c *ServerClient) GetSector() {
 		hostsCnt := len(c.conf.Sectors[i].Config.Hosts)
 		for j := 0; j < hostsCnt; j = j + 1 {
 			hosts := strings.Split(c.conf.Sectors[i].Config.Hosts[j], "|")
-			if hostExists(hosts, c.conf.Agent.Hostname) {
+			if elExists(hosts, c.conf.Agent.Hostname) {
 				sector = append(sector, int64(i))
 				Logger.LogInfo(fmt.Sprintf("Sector: %s [%d]",
 					c.conf.Sectors[i].Sector, i))
@@ -169,7 +172,7 @@ func (c *ServerClient) GetSector() {
 						hostsCnt], "|")
 					hosts_prev := strings.Split(c.conf.Sectors[i].Config.Hosts[(j-l+hostsCnt)%
 						hostsCnt], "|")
-					if !hostExists(hosts_next, c.conf.Agent.Hostname) {
+					if !elExists(hosts_next, c.conf.Agent.Hostname) {
 						c.AddHost(hosts_next[0], c.conf.Sectors[i].Sector)
 						c.AddHost(hosts_prev[0], c.conf.Sectors[i].Sector)
 					}
@@ -180,10 +183,10 @@ func (c *ServerClient) GetSector() {
 	c.sectors = sector
 }
 
-/* Function add non-existing host in hosts array */
+// Function add non-existing host in hosts array
 func (c *ServerClient) AddHost(host string, sector string) {
 	var vec AgentConfig.VectorType
-	if !hostExists(c.neighbours, host) {
+	if !elExists(c.neighbours, host) {
 		c.neighbours = append(c.neighbours, host)
 		if _, ok := AgentConfig.Vector[host]; !ok {
 			vec = AgentConfig.VectorType{
@@ -192,7 +195,7 @@ func (c *ServerClient) AddHost(host string, sector string) {
 		} else {
 			vec = AgentConfig.Vector[host]
 		}
-		if !hostExists(vec.Sectors, sector) {
+		if !elExists(vec.Sectors, sector) {
 			vec.Sectors = append(vec.Sectors,
 				sector)
 		}
@@ -201,7 +204,7 @@ func (c *ServerClient) AddHost(host string, sector string) {
 	} else {
 
 		vec = AgentConfig.Vector[host]
-		if !hostExists(vec.Sectors, sector) {
+		if !elExists(vec.Sectors, sector) {
 			vec.Sectors = append(vec.Sectors,
 				sector)
 		}
@@ -210,7 +213,8 @@ func (c *ServerClient) AddHost(host string, sector string) {
 	}
 }
 
-func hostExists(array []string, item string) bool {
+// Function check array and return true if item exist
+func elExists(array []string, item string) bool {
 	for i := 0; i < len(array); i = i + 1 {
 		if array[i] == item {
 			return true
@@ -220,36 +224,21 @@ func hostExists(array []string, item string) bool {
 }
 
 func (c *ServerClient) insertVector() error {
-
 	var err error
-	err = c.insertVector()
-	if err != nil {
-		Logger.LogError(fmt.Sprintf("%s", err))
-	}
 
 	db := Database.GetConnection()
 	err = db.Ping()
 	if err != nil {
-		AgentConfig.PrintJsonVector()
-		for host, mapEl := range AgentConfig.Vector {
-			for _, sec := range mapEl.Sectors {
-				fmt.Printf("INSERT vector_stat SET host=%s,server=%s,sector=%s,status=%v,timestamp=%d\n\n",
-					c.conf.Agent.Hostname, host, sec, mapEl.Status, time.Now().Unix())
-			}
-		}
 		return err
 	}
-	stmt, err := db.Prepare(
-		fmt.Sprintf("INSERT vector_stat SET host=%s,server=%s,status=%v,timestamp=%s",
-			"server", "host", false, "date"))
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
 
-	_, err = stmt.Exec()
-	if err != nil {
-		return err
+	AgentConfig.PrintJsonVector()
+	for host, mapEl := range AgentConfig.Vector {
+		for _, sec := range mapEl.Sectors {
+			fmt.Printf("INSERT vector_stat SET host=%s,server=%s,sector=%s,status=%v,timestamp=%d\n\n",
+				c.conf.Agent.Hostname, host, sec, mapEl.Status, time.Now().Unix())
+		}
 	}
+
 	return nil
 }

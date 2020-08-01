@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"./AgentClient"
-	"./AgentConfig"
-	"./AgentServer"
-	"./Database"
-	"./Logger"
+	"../pkg/AgentClient"
+	"../pkg/AgentConfig"
+	"../pkg/AgentServer"
+	"../pkg/Database"
+	"../pkg/Logger"
 )
 
 var (

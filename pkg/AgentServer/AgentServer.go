@@ -7,7 +7,6 @@ import (
 	"math"
 	"net"
 	"strings"
-	"time"
 
 	"../AgentConfig"
 	"../Logger"
@@ -155,9 +154,9 @@ func New(c *AgentConfig.Config, address string) *server {
 }
 
 func (s *server) Server() {
-	if conf.Agent.IsServer {
-		time.Sleep(time.Duration(conf.Agent.Interval) * time.Second)
-	}
+	// if conf.Agent.IsServer {
+	// 	time.Sleep(time.Duration(conf.Agent.Interval) * time.Second)
+	// }
 }
 
 // func NewWithTLS(address string, certFile string, keyFile string) *server {

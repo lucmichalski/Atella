@@ -46,7 +46,7 @@ type AgentConfig struct {
 	HostCnt      int64  `json:"host_cnt"`
 	HexLen       int64  `json:"hex_len"`
 	MessagePath  string `json:"message_path"`
-	IsServer     bool   `json:"is_server"`
+	Master       bool   `json:"master"`
 	Interval     int64  `json:"interval"`
 }
 
@@ -64,15 +64,20 @@ type SectorsConfig struct {
 	Config *SectorConfig `json:"config"`
 }
 
+type MasterServersConfig struct {
+	Hosts []string `json:"hosts"`
+}
+
 type SectorConfig struct {
 	Hosts []string `json:"hosts"`
 }
 
 type Config struct {
-	Agent    *AgentConfig               `json:"AgentSection"`
-	Channels map[string]*ChannelsConfig `json:"ChannelsSection"`
-	Sectors  []*SectorsConfig           `json:"SectorsSection"`
-	DB       *DatabaseConfig            `json:"DatabaseSection"`
+	Agent         *AgentConfig               `json:"AgentSection"`
+	Channels      map[string]*ChannelsConfig `json:"ChannelsSection"`
+	Sectors       []*SectorsConfig           `json:"SectorsSection"`
+	DB            *DatabaseConfig            `json:"DatabaseSection"`
+	MasterServers *MasterServersConfig       `json:"MasterServersSection"`
 }
 
 func NewConfig() *Config {
@@ -85,10 +90,15 @@ func NewConfig() *Config {
 			LogLevel:     4,
 			HostCnt:      1,
 			HexLen:       10,
-			MessagePath:  "/usr/local/mags/msg"},
-		DB:       &DatabaseConfig{},
+			MessagePath:  "/usr/local/mags/msg",
+			Master:       false,
+			Interval:     10},
+		DB: &DatabaseConfig{},
+		MasterServers: &MasterServersConfig{
+			Hosts: make([]string, 0)},
 		Channels: make(map[string]*ChannelsConfig),
 		Sectors:  make([]*SectorsConfig, 0)}
+
 	return local
 }
 
@@ -105,28 +115,33 @@ func (c *Config) SavePid() {
 	Logger.LogSystem(fmt.Sprintf("Running with PID %d\n", Pid))
 }
 
+// Function print Config as json format
 func (c *Config) PrintJsonConfig() {
 	config_json := c.GetJsonConfig()
 	Logger.LogSystem(string(config_json))
 }
 
+// Function return Config as json format
 func (c *Config) GetJsonConfig() []byte {
 	config_json, _ := json.Marshal(c)
 	return config_json
 }
 
+// Function print Vector as json format
 func PrintJsonVector() {
 	res := GetJsonVector()
 	Logger.LogSystem(string(res))
 }
 
+// Function return Vector as json format
 func GetJsonVector() []byte {
 	res, _ := json.Marshal(Vector)
 	return res
 }
 
+// Function loads configs from directory
 func (c *Config) LoadDirectory(path string) error {
-  var err error = nil
+	var err error = nil
 	if path == "" {
 		if path, err = getDefaultConfigDir(); err != nil {
 			return err
@@ -157,6 +172,7 @@ func (c *Config) LoadDirectory(path string) error {
 	return filepath.Walk(path, walkfn)
 }
 
+// Function return default config path if it exist
 func getDefaultConfigPath() (string, error) {
 	envfile := os.Getenv("MAGS_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.mags/mags.conf")
@@ -173,6 +189,7 @@ func getDefaultConfigPath() (string, error) {
 		" in $MAGS_CONFIG_PATH, %s, or %s", homefile, etcfile)
 }
 
+// Function return default config dir if it exist
 func getDefaultConfigDir() (string, error) {
 	envdir := os.Getenv("MAGS_CONFIG_DIR")
 	homedir := os.ExpandEnv("${HOME}/.mags/conf.d")
@@ -180,7 +197,7 @@ func getDefaultConfigDir() (string, error) {
 
 	for _, path := range []string{envdir, homedir, etcdir} {
 		if _, err := os.Stat(path); err == nil {
-			Logger.LogSystem(fmt.Sprintf("Using config file: %s", path))
+			Logger.LogSystem(fmt.Sprintf("Using config directory: %s", path))
 			return path, nil
 		}
 	}
@@ -189,6 +206,7 @@ func getDefaultConfigDir() (string, error) {
 		" in $MAGS_CONFIG_DIR, %s, or %s", homedir, etcdir)
 }
 
+// Function loads configs from path
 func (c *Config) LoadConfig(path string) error {
 	var err error
 	if path == "" {
@@ -241,6 +259,17 @@ func (c *Config) LoadConfig(path string) error {
 		}
 	}
 
+	/* Parse master_servers table */
+	if val, ok := tbl.Fields["master_servers"]; ok {
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			return fmt.Errorf("%s: invalid configuration", path)
+		}
+		if err = toml.UnmarshalTable(subTable, c.MasterServers); err != nil {
+			return fmt.Errorf("Error parsing %s, %s", path, err)
+		}
+	}
+
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
@@ -272,7 +301,7 @@ func (c *Config) LoadConfig(path string) error {
 						pluginName)
 				}
 			}
-		case "agent", "database":
+		case "agent", "database", "master_servers":
 		default:
 			return fmt.Errorf("Error parsing %s, %s", name, err)
 		}
@@ -280,6 +309,7 @@ func (c *Config) LoadConfig(path string) error {
 	return nil
 }
 
+// Function add channel config into channels section
 func (c *Config) addChannel(name string, table *ast.Table) error {
 	rp := &ChannelsConfig{
 		Channel: name,
@@ -305,6 +335,7 @@ func (c *Config) addChannel(name string, table *ast.Table) error {
 	return nil
 }
 
+// Function add sector config into sectors section
 func (c *Config) addSector(name string, table *ast.Table) error {
 	rp := &SectorsConfig{
 		Sector: name,

@@ -54,3 +54,19 @@ func Connect() {
 func GetConnection() *sql.DB {
 	return base
 }
+
+func SelectQuery(q string) {
+
+}
+
+func InsertQuery(q string) {
+
+}
+
+func InsertOrUpdateQuery(q string) {
+
+}
+
+func Migrate() {
+	
+}
