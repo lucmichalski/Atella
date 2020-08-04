@@ -119,14 +119,17 @@ func main() {
 	conf.SavePid()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP)
-	// signal.Notify(c, syscall.SIGINT)
+	signal.Notify(c, syscall.SIGINT)
 	go handle(c)
-	server := AgentServer.New(conf, "0.0.0.0:5223")
 
+	server := AgentServer.New(conf, "0.0.0.0:5223")
 	go server.Listen()
+	go server.MasterServer()
 
 	client = AgentClient.New(conf)
 	go client.Run()
+
+
 	for {
 		time.Sleep(10 * time.Second)
 	}

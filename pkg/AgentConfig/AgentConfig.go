@@ -25,6 +25,11 @@ type VectorType struct {
 	Sectors []string `json:"sectors"`
 }
 
+type MasterVectorType struct {
+	Host  string     `json:"host"`
+	Vector VectorType `json:"vector"`
+}
+
 var (
 	sectionDefaults = []string{"agent"}
 	envVarRegex     = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
@@ -35,6 +40,7 @@ var (
 	)
 	Pid    int                   = 0
 	Vector map[string]VectorType = make(map[string]VectorType, 0)
+	MasterVector map[string]MasterVectorType = make(map[string]MasterVectorType, 0)
 )
 
 type AgentConfig struct {
@@ -136,6 +142,18 @@ func PrintJsonVector() {
 // Function return Vector as json format
 func GetJsonVector() []byte {
 	res, _ := json.Marshal(Vector)
+	return res
+}
+
+// Function print MasterVector as json format
+func PrintJsonMasterVector() {
+	res := GetJsonMasterVector()
+	Logger.LogSystem(string(res))
+}
+
+// Function return MasterVector as json format
+func GetJsonMasterVector() []byte {
+	res, _ := json.Marshal(MasterVector)
 	return res
 }
 

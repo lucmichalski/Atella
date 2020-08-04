@@ -7,14 +7,18 @@ import (
 	"math"
 	"net"
 	"strings"
+	"time"
 
 	"../AgentConfig"
+	"../Database"
 	"../Logger"
 )
 
 type clientParams struct {
-	canTalk bool
-	id      uint64
+	canTalk                 bool
+	id                      uint64
+	currentClientHostname   string
+	currentClientVectorJson string
 }
 
 type ServerClient struct {
@@ -79,6 +83,8 @@ func (s *server) OnNewClient(c *ServerClient) {
 	if global == math.MaxInt64 {
 		global = 0
 	}
+	c.params.currentClientHostname = ""
+	c.params.currentClientVectorJson = ""
 }
 
 func (s *server) OnClientConnectionClosed(c *ServerClient, err error) {
@@ -94,10 +100,6 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 	case "quit", "exit":
 		c.Send(fmt.Sprintf("Bye!\n"))
 		return true
-	case "vector":
-		c.Send(fmt.Sprintf("%s\n", AgentConfig.GetJsonVector()))
-		AgentConfig.PrintJsonVector()
-		return false
 	}
 	if c.params.canTalk == true {
 		Logger.LogInfo(fmt.Sprintf("Server receive [%s]", msg))
@@ -105,9 +107,18 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 		case "who":
 			c.Send(fmt.Sprintf("Id: %d\n", c.params.id))
 		case "host":
-			c.Send(fmt.Sprintf("ack %s\n", msg_map[1]))
+			c.params.currentClientHostname = msg_map[1]
+			c.Send(fmt.Sprintf("ack %s\n", c.params.currentClientHostname))
 		case "hostname":
 			c.Send(fmt.Sprintf("%s\n", conf.Agent.Hostname))
+		case "vector":
+			c.Send(fmt.Sprintf("%s\n", AgentConfig.GetJsonVector()))
+			AgentConfig.PrintJsonVector()
+		case "mastervector":
+			c.Send(fmt.Sprintf("%s\n", AgentConfig.GetJsonMasterVector()))
+			AgentConfig.PrintJsonMasterVector()
+		case "set":
+			c.params.currentClientVectorJson = msg_map[1]
 		}
 	} else if msg == "Meow!" {
 		Logger.LogInfo(fmt.Sprintf("Receive [%s], set canTalk -> true", msg))
@@ -145,7 +156,7 @@ func (s *server) Listen() {
 
 func New(c *AgentConfig.Config, address string) *server {
 	conf = c
-	Logger.LogInfo(fmt.Sprintf("Init server side with address %s", address))
+	Logger.LogSystem(fmt.Sprintf("Init server side with address %s", address))
 	server := &server{
 		address: address,
 		config:  nil,
@@ -153,10 +164,31 @@ func New(c *AgentConfig.Config, address string) *server {
 	return server
 }
 
-func (s *server) Server() {
-	// if conf.Agent.IsServer {
-	// 	time.Sleep(time.Duration(conf.Agent.Interval) * time.Second)
-	// }
+func (s *server) MasterServer() {
+	if conf.Agent.Master {
+		Logger.LogSystem("I'm master server")
+	}
+	AgentConfig.MasterVector = make(map[string]AgentConfig.MasterVectorType, 0)
+	time.Sleep(time.Duration(conf.Agent.Interval) * time.Second)
+}
+
+func (c *server) insertVector() error {
+
+	var err error
+
+	db := Database.GetConnection()
+	err = db.Ping()
+	if err != nil {
+		return err
+	}
+	for host, mapEl := range AgentConfig.Vector {
+		for _, sec := range mapEl.Sectors {
+			fmt.Printf("INSERT vector_stat SET host=%s,server=%s,sector=%s,status=%v,timestamp=%d\n\n",
+				conf.Agent.Hostname, host, sec, mapEl.Status, time.Now().Unix())
+		}
+	}
+
+	return nil
 }
 
 // func NewWithTLS(address string, certFile string, keyFile string) *server {

@@ -3,22 +3,25 @@ package AgentClient
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"net"
 	"strings"
 	"time"
 
 	"../AgentConfig"
-	"../Database"
 	"../Logger"
 )
 
 var (
-	StopRequest bool = false
-	StopReply   bool = false
+	StopRequest              bool = false
+	StopReply                bool = false
+	masterServerIndex        int  = 0
+	currentMasterServerIndex int  = 0
 )
 
 type ServerClient struct {
 	conn       net.Conn
+	masterconn net.Conn
 	conf       *AgentConfig.Config
 	neighbours []string
 	sectors    []int64
@@ -50,7 +53,7 @@ func (c *ServerClient) Run() {
 		msg                   string   = ""
 		msg_map               []string = []string{}
 		status                bool     = false
-		currenеNeighboursInd  int      = 0
+		currentNeighboursInd  int      = 0
 		currentNeighboursAddr string   = ""
 		vec                   AgentConfig.VectorType
 	)
@@ -60,9 +63,9 @@ func (c *ServerClient) Run() {
 			Logger.LogInfo("No neighbours")
 			StopReply = true
 		} else {
-			currentNeighboursAddr = c.neighbours[currenеNeighboursInd]
-			if currenеNeighboursInd == 0 {
-				c.insertVector()
+			currentNeighboursAddr = c.neighbours[currentNeighboursInd]
+			if currentNeighboursInd == 0 {
+				c.sendVector()
 			}
 			if !StopRequest {
 				c.conn, err = net.Dial("tcp", fmt.Sprintf("%s:5223",
@@ -113,7 +116,7 @@ func (c *ServerClient) Run() {
 						}
 					}
 				}
-				currenеNeighboursInd = (currenеNeighboursInd + 1) %
+				currentNeighboursInd = (currentNeighboursInd + 1) %
 					len(c.neighbours)
 			} else {
 				StopReply = true
@@ -125,7 +128,7 @@ func (c *ServerClient) Run() {
 
 }
 
-// Init client 
+// Init client
 func New(c *AgentConfig.Config) *ServerClient {
 	client := &ServerClient{}
 	client.init(c)
@@ -138,8 +141,16 @@ func (client *ServerClient) init(c *AgentConfig.Config) {
 	client.neighbours = make([]string, 0)
 	client.sectors = make([]int64, 0)
 	AgentConfig.Vector = make(map[string]AgentConfig.VectorType, 0)
+
+	if !client.conf.Agent.Master {
+		masterServerIndex = rand.Int() % len(client.conf.MasterServers.Hosts)
+		currentMasterServerIndex = 0
+		Logger.LogSystem(fmt.Sprintf("Use [%s] as master server",
+			client.conf.MasterServers.Hosts[masterServerIndex]))
+	}
+
 	client.GetSector()
-	Logger.LogInfo("Init client side")
+	Logger.LogSystem("Init client side")
 }
 
 func (client *ServerClient) Reload(c *AgentConfig.Config) {
@@ -153,7 +164,7 @@ func (client *ServerClient) Reload(c *AgentConfig.Config) {
 	Logger.LogSystem("Client reloaded")
 }
 
-// Function find and return sector index 
+// Function find and return sector index
 func (c *ServerClient) GetSector() {
 	var (
 		sector     []int64 = []int64{}
@@ -202,7 +213,6 @@ func (c *ServerClient) AddHost(host string, sector string) {
 		AgentConfig.Vector[host] = vec
 		Logger.LogInfo(fmt.Sprintf("Added host [%s]", host))
 	} else {
-
 		vec = AgentConfig.Vector[host]
 		if !elExists(vec.Sectors, sector) {
 			vec.Sectors = append(vec.Sectors,
@@ -223,22 +233,29 @@ func elExists(array []string, item string) bool {
 	return false
 }
 
-func (c *ServerClient) insertVector() error {
-	var err error
-
-	db := Database.GetConnection()
-	err = db.Ping()
-	if err != nil {
-		return err
+// Function send vector to one of master servers
+func (c *ServerClient) sendVector() error {
+	var err error = nil
+	if len(c.conf.MasterServers.Hosts) < 1 {
+		return fmt.Errorf("Master servers not specifiyed")
 	}
-
-	AgentConfig.PrintJsonVector()
-	for host, mapEl := range AgentConfig.Vector {
-		for _, sec := range mapEl.Sectors {
-			fmt.Printf("INSERT vector_stat SET host=%s,server=%s,sector=%s,status=%v,timestamp=%d\n\n",
-				c.conf.Agent.Hostname, host, sec, mapEl.Status, time.Now().Unix())
+	for {
+		c.masterconn, err = net.Dial("tcp", fmt.Sprintf("%s:5223",
+			c.conf.MasterServers.Hosts[currentMasterServerIndex]))
+		if err == nil {
+			_, err = c.masterconn.Write(AgentConfig.GetJsonVector())
+			c.masterconn.Close()
+			masterServerIndex = currentMasterServerIndex
+			break
+		} else {
+			currentMasterServerIndex = currentMasterServerIndex + 1
+			currentMasterServerIndex = currentMasterServerIndex %
+				len(c.conf.MasterServers.Hosts)
+		}
+		if currentMasterServerIndex == masterServerIndex {
+			return fmt.Errorf("Could not connect to any of masters")
 		}
 	}
 
-	return nil
+	return err
 }
