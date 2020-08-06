@@ -3,3 +3,4 @@
 /replicate.sh
 /etc.zk
 /*.xml
+/var/lib/clickhouse
