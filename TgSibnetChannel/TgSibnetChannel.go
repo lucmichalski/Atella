@@ -132,7 +132,7 @@ func TgSibnetSendPersonalMessage(text string, hostname string) (bool,
 		return false, fmt.Errorf("SibnetBot users list are empty")
 	}
 	msg := newTgSibnetMessage()
-	msg.Text = fmt.Sprintf("[agent at %s]: %s", hostname, text)
+	msg.Text = fmt.Sprintf("[%s]: %s", hostname, text)
 	msg.Usernames = configTgSibnetChannel.to
 	result, err := sendMessage(*msg)
 	Logger.LogInfo(fmt.Sprintf("Bot reply %s\n", result))
