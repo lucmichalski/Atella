@@ -3,7 +3,7 @@
   omit_hostname = false
   log_level = 4
   log_file = "/usr/local/mags/logs/mags.log"
-  pid_file = "/var/run/mags.pid"
+  pid_file = "/usr/local/mags/mags.pid"
   host_cnt = 1
   hex_len = 10
   message_path = "/usr/local/mags/msg"
