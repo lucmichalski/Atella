@@ -65,12 +65,16 @@ func (c *ServerClient) Run() {
 		} else {
 			currentNeighboursAddr = c.neighbours[currentNeighboursInd]
 			if currentNeighboursInd == 0 {
-				c.sendVector()
+				err = c.sendVector()
+				if err != nil {
+					Logger.LogError(fmt.Sprintf("%s", err))
+				}
 			}
 			if !StopRequest {
 				c.conn, err = net.Dial("tcp", fmt.Sprintf("%s:5223",
 					currentNeighboursAddr))
-				vec = AgentConfig.Vector[currentNeighboursAddr]
+				vectorIndex := getVectorIndexByHost(currentNeighboursAddr)
+				vec.Host = currentNeighboursAddr
 				if err != nil {
 					Logger.LogError(fmt.Sprintf("%s", err))
 					vec.Status = false
@@ -98,7 +102,7 @@ func (c *ServerClient) Run() {
 								exit = true
 								Logger.LogError(fmt.Sprintf("%s", err))
 							}
-						case "ack":
+						case "ackhost":
 							status = true
 							err = c.Send("exit\n")
 							if err != nil {
@@ -111,7 +115,11 @@ func (c *ServerClient) Run() {
 						if exit {
 							c.Close()
 							vec.Status = status
-							AgentConfig.Vector[currentNeighboursAddr] = vec
+							if vectorIndex < 0 {
+								AgentConfig.Vector = append(AgentConfig.Vector, vec)
+							} else {
+								AgentConfig.Vector[vectorIndex] = vec
+							}
 							break
 						}
 					}
@@ -140,7 +148,7 @@ func (client *ServerClient) init(c *AgentConfig.Config) {
 	client.conf = c
 	client.neighbours = make([]string, 0)
 	client.sectors = make([]int64, 0)
-	AgentConfig.Vector = make(map[string]AgentConfig.VectorType, 0)
+	AgentConfig.Vector = make([]AgentConfig.VectorType, 0)
 
 	if !client.conf.Agent.Master {
 		masterServerIndex = rand.Int() % len(client.conf.MasterServers.Hosts)
@@ -181,8 +189,8 @@ func (c *ServerClient) GetSector() {
 				for l := 1; int64(l) <= c.conf.Agent.HostCnt; l = l + 1 {
 					hosts_next := strings.Split(c.conf.Sectors[i].Config.Hosts[(j+l)%
 						hostsCnt], "|")
-					hosts_prev := strings.Split(c.conf.Sectors[i].Config.Hosts[(j-l+hostsCnt)%
-						hostsCnt], "|")
+					hosts_prev := strings.Split(
+						c.conf.Sectors[i].Config.Hosts[(j-l+hostsCnt)%hostsCnt], "|")
 					if !elExists(hosts_next, c.conf.Agent.Hostname) {
 						c.AddHost(hosts_next[0], c.conf.Sectors[i].Sector)
 						c.AddHost(hosts_prev[0], c.conf.Sectors[i].Sector)
@@ -194,31 +202,38 @@ func (c *ServerClient) GetSector() {
 	c.sectors = sector
 }
 
-// Function add non-existing host in hosts array
+// Function add non-existing host in vector and neighbours array
 func (c *ServerClient) AddHost(host string, sector string) {
 	var vec AgentConfig.VectorType
+	index := getVectorIndexByHost(host)
 	if !elExists(c.neighbours, host) {
 		c.neighbours = append(c.neighbours, host)
-		if _, ok := AgentConfig.Vector[host]; !ok {
+		if index < 0 {
 			vec = AgentConfig.VectorType{
+				Host:    host,
 				Status:  false,
 				Sectors: make([]string, 0)}
 		} else {
-			vec = AgentConfig.Vector[host]
+			vec = AgentConfig.Vector[index]
 		}
 		if !elExists(vec.Sectors, sector) {
 			vec.Sectors = append(vec.Sectors,
 				sector)
 		}
-		AgentConfig.Vector[host] = vec
+
+		if index < 0 {
+			AgentConfig.Vector = append(AgentConfig.Vector, vec)
+		} else {
+			AgentConfig.Vector[index] = vec
+		}
 		Logger.LogInfo(fmt.Sprintf("Added host [%s]", host))
 	} else {
-		vec = AgentConfig.Vector[host]
+		vec = AgentConfig.Vector[index]
 		if !elExists(vec.Sectors, sector) {
 			vec.Sectors = append(vec.Sectors,
 				sector)
 		}
-		AgentConfig.Vector[host] = vec
+		AgentConfig.Vector[index] = vec
 		Logger.LogInfo(fmt.Sprintf("Added sector [%s] for host [%s]", sector, host))
 	}
 }
@@ -236,21 +251,26 @@ func elExists(array []string, item string) bool {
 // Function send vector to one of master servers
 func (c *ServerClient) sendVector() error {
 	var err error = nil
+	if c.conf.Agent.Master {
+		return nil
+	}
 	if len(c.conf.MasterServers.Hosts) < 1 {
 		return fmt.Errorf("Master servers not specifiyed")
 	}
 	for {
 		c.masterconn, err = net.Dial("tcp", fmt.Sprintf("%s:5223",
 			c.conf.MasterServers.Hosts[currentMasterServerIndex]))
-		if err == nil {
-			_, err = c.masterconn.Write(AgentConfig.GetJsonVector())
+		if err != nil {
+				currentMasterServerIndex = currentMasterServerIndex + 1
+				currentMasterServerIndex = currentMasterServerIndex %
+					len(c.conf.MasterServers.Hosts)
+		} else {
+			_, err = c.masterconn.Write([]byte("Meow!\n"))
+			_, err = c.masterconn.Write(
+				[]byte(fmt.Sprintf("set %s\n", AgentConfig.GetJsonVector())))
 			c.masterconn.Close()
 			masterServerIndex = currentMasterServerIndex
 			break
-		} else {
-			currentMasterServerIndex = currentMasterServerIndex + 1
-			currentMasterServerIndex = currentMasterServerIndex %
-				len(c.conf.MasterServers.Hosts)
 		}
 		if currentMasterServerIndex == masterServerIndex {
 			return fmt.Errorf("Could not connect to any of masters")
@@ -258,4 +278,14 @@ func (c *ServerClient) sendVector() error {
 	}
 
 	return err
+}
+
+// Function retur index in vector array if element exist. Else return -1
+func getVectorIndexByHost(host string) int {
+	for i := 0; i < len(AgentConfig.Vector); i = i + 1 {
+		if AgentConfig.Vector[i].Host == host {
+			return i
+		}
+	}
+	return -1
 }

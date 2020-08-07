@@ -170,7 +170,7 @@ func sendMessage(msg mailMessage) error {
 		msg.Emails,
 		[]byte(msg.Text))
 	if err != nil {
-		return fmt.Errorf("%s", err)
+		return err
 	}
 	return nil
 }

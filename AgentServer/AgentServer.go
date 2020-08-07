@@ -3,6 +3,7 @@ package AgentServer
 import (
 	"bufio"
 	"crypto/tls"
+	// "encoding/json"
 	"fmt"
 	"math"
 	"net"
@@ -108,7 +109,7 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 			c.Send(fmt.Sprintf("Id: %d\n", c.params.id))
 		case "host":
 			c.params.currentClientHostname = msg_map[1]
-			c.Send(fmt.Sprintf("ack %s\n", c.params.currentClientHostname))
+			c.Send(fmt.Sprintf("ackhost %s\n", c.params.currentClientHostname))
 		case "hostname":
 			c.Send(fmt.Sprintf("%s\n", conf.Agent.Hostname))
 		case "vector":
@@ -117,8 +118,17 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 		case "mastervector":
 			c.Send(fmt.Sprintf("%s\n", AgentConfig.GetJsonMasterVector()))
 			AgentConfig.PrintJsonMasterVector()
+			AgentConfig.PrintJsonMasterVector()
 		case "set":
 			c.params.currentClientVectorJson = msg_map[1]
+			Logger.LogInfo(msg_map[1])
+			// if c.params.currentClientHostname != "" &&
+			// 	c.params.currentClientVectorJson != "" {
+			// 	m := new(AgentConfig.MasterVectorType)
+			// 	vec := new(AgentConfig.VectorType)
+			// 	json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
+			// 	AgentConfig.MasterVector[c.params.currentClientHostname] = *m
+			// }
 		}
 	} else if msg == "Meow!" {
 		Logger.LogInfo(fmt.Sprintf("Receive [%s], set canTalk -> true", msg))
@@ -168,7 +178,7 @@ func (s *server) MasterServer() {
 	if conf.Agent.Master {
 		Logger.LogSystem("I'm master server")
 	}
-	AgentConfig.MasterVector = make(map[string]AgentConfig.MasterVectorType, 0)
+	AgentConfig.MasterVector = make(map[string]AgentConfig.VectorType, 0)
 	time.Sleep(time.Duration(conf.Agent.Interval) * time.Second)
 }
 
@@ -181,10 +191,10 @@ func (c *server) insertVector() error {
 	if err != nil {
 		return err
 	}
-	for host, mapEl := range AgentConfig.Vector {
+	for _, mapEl := range AgentConfig.Vector {
 		for _, sec := range mapEl.Sectors {
 			fmt.Printf("INSERT vector_stat SET host=%s,server=%s,sector=%s,status=%v,timestamp=%d\n\n",
-				conf.Agent.Hostname, host, sec, mapEl.Status, time.Now().Unix())
+				conf.Agent.Hostname, mapEl.Host, sec, mapEl.Status, time.Now().Unix())
 		}
 	}
 

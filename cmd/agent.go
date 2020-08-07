@@ -23,8 +23,6 @@ var (
 	reportType     string                    = "Test"
 	configFilePath string                    = ""
 	configDirPath  string                    = ""
-	logLevel       int64                     = 0
-	pidFilePath    string                    = "./agent.pid"
 	target         string                    = "all"
 	client         *AgentClient.ServerClient = nil
 )
@@ -32,7 +30,7 @@ var (
 func handle(c chan os.Signal) {
 	for {
 		sig := <-c
-		Logger.LogSystem(fmt.Sprintf("Receive %s", sig))
+		Logger.LogSystem(fmt.Sprintf("Receive %s [%s]", sig, sig.String()))
 		switch sig.String() {
 		case "hangup":
 			err := conf.LoadConfig(configFilePath)
@@ -44,6 +42,12 @@ func handle(c chan os.Signal) {
 			client.Reload(conf)
 			Database.Reload(conf)
 			Logger.LogSystem("Reloaded")
+		case "interrupt":
+			os.Exit(0)
+		case "user defined signal 1":
+			conf.Send()
+		case "user defined signal 2":
+			conf.Send()
 		default:
 		}
 	}
@@ -98,11 +102,6 @@ func main() {
 	conf.Init()
 	conf.PrintJsonConfig()
 
-	_, err = os.Stat(conf.Agent.MessagePath)
-	if os.IsNotExist(err) {
-		os.MkdirAll(conf.Agent.MessagePath, os.ModePerm)
-	}
-
 	if strings.ToLower(runMode) == "report" {
 		if strings.ToLower(reportType) == "reboot" {
 			reportMessage = fmt.Sprintf("Host [%s] has been power-on at [%s]",
@@ -111,15 +110,22 @@ func main() {
 		conf.Report(reportMessage, target)
 		os.Exit(0)
 	} else if strings.ToLower(runMode) == "send" {
-		conf.TryReport()
+		pid := conf.GetPid()
+		if pid > 0 {
+			syscall.Kill(pid, syscall.SIGUSR2)
+		}
 		os.Exit(0)
 	}
+
+	conf.SavePid()
 	Database.Init(conf)
 	Database.Connect()
-	conf.SavePid()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP)
 	signal.Notify(c, syscall.SIGINT)
+	signal.Notify(c, syscall.SIGUSR1)
+	signal.Notify(c, syscall.SIGUSR2)
+	
 	go handle(c)
 
 	server := AgentServer.New(conf, "0.0.0.0:5223")
@@ -129,7 +135,7 @@ func main() {
 	client = AgentClient.New(conf)
 	go client.Run()
 
-
+  go conf.Sender()
 	for {
 		time.Sleep(10 * time.Second)
 	}

@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"../Logger"
 	"../MailChannel"
@@ -26,11 +28,16 @@ type msg struct {
 	Message string `json:"message"`
 }
 
+type Reporter struct {
+	mux sync.Mutex
+}
+
 var (
 	defaultChannels []string = []string{"tgsibnet", "mail"}
+	reporter                 = new(Reporter)
 )
 
-// Function return a pseudo-random generated hex-string. 
+// Function return a pseudo-random generated hex-string.
 // String length are specifyed by config (And get to function as n)
 func RandomHex(n int64) (string, error) {
 	bytes := make([]byte, n)
@@ -56,10 +63,21 @@ func (conf *Config) Init() {
 				conf.Channels[i].Channel))
 		}
 	}
+	_, err := os.Stat(conf.Agent.MessagePath)
+	if os.IsNotExist(err) {
+		os.MkdirAll(conf.Agent.MessagePath, os.ModePerm)
+	}
+}
+
+func (conf *Config) Sender() {
+	for {
+		conf.Send()
+		time.Sleep(2 * time.Second)
+	}
 }
 
 // Function call send-report mechanism. Use files created by Report function.
-func (conf *Config) TryReport() {
+func (conf *Config) Send() {
 	var (
 		err     error  = nil
 		message string = ""
@@ -67,14 +85,15 @@ func (conf *Config) TryReport() {
 		res     bool   = true
 		m       msg
 	)
-
+	reporter.mux.Lock()
+	Logger.LogInfo("Start sender iteration")
 	files, err := ioutil.ReadDir(conf.Agent.MessagePath)
 	if err != nil {
 		Logger.LogError(fmt.Sprintf("%s", err))
 	}
 
 	for _, file := range files {
-		if !file.IsDir() {
+		if !file.IsDir() && file.Name()[0] != '.' {
 			f, err := os.Open(fmt.Sprintf("%s/%s", conf.Agent.MessagePath, file.Name()))
 			if err != nil {
 				Logger.LogError(fmt.Sprintf("%s", err))
@@ -121,6 +140,7 @@ func (conf *Config) TryReport() {
 			}
 		}
 	}
+	reporter.mux.Unlock()
 }
 
 // Function save report as a file (filename are random hex string).

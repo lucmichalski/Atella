@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	_ "net/http"
 	_ "net/url"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"../Logger"
@@ -21,13 +21,9 @@ import (
 )
 
 type VectorType struct {
+	Host    string   `json:"host"`
 	Status  bool     `json:"status"`
 	Sectors []string `json:"sectors"`
-}
-
-type MasterVectorType struct {
-	Host  string     `json:"host"`
-	Vector VectorType `json:"vector"`
 }
 
 var (
@@ -38,9 +34,9 @@ var (
 		`"`, `\"`,
 		`\`, `\\`,
 	)
-	Pid    int                   = 0
-	Vector map[string]VectorType = make(map[string]VectorType, 0)
-	MasterVector map[string]MasterVectorType = make(map[string]MasterVectorType, 0)
+	Pid          int                   = 0
+	Vector       []VectorType          = make([]VectorType, 0)
+	MasterVector map[string]VectorType = make(map[string]VectorType, 0)
 )
 
 type AgentConfig struct {
@@ -111,14 +107,73 @@ func NewConfig() *Config {
 // Function save procces ID to file, specifyied as pidFilePath.
 func (c *Config) SavePid() {
 	Pid = os.Getpid()
-	pidfile, err := os.OpenFile(c.Agent.PidFile,
+
+	_, err := os.Stat(c.Agent.PidFile)
+	if os.IsNotExist(err) {
+		path := strings.Split(c.Agent.PidFile, "/")
+		fullpath := "/"
+		for i := 0; i < len(path)-1; i = i + 1 {
+			if path[i] != "" {
+				fullpath = fmt.Sprintf("%s/%s", fullpath, path[i])
+			}
+			_, err := os.Stat(fullpath)
+			Logger.LogSystem(fmt.Sprintf("Create [%s] [%s]", path[i], fullpath))
+			if os.IsNotExist(err) {
+				os.MkdirAll(fullpath, 775)
+			}
+		}
+	}
+
+	file, err := os.OpenFile(c.Agent.PidFile,
 		os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		Logger.LogFatal(fmt.Sprintf("%s", err))
 	}
-	defer pidfile.Close()
-	pidfile.WriteString(strconv.FormatInt(int64(Pid), 10))
+	defer file.Close()
+	name := strings.Split(os.Args[0], "/")
+	file.WriteString(fmt.Sprintf("%d %s", Pid, name[len(name)-1]))
 	Logger.LogSystem(fmt.Sprintf("Running with PID %d\n", Pid))
+}
+
+// Function get procces ID from file, specifyied as pidFilePath.
+func (c *Config) GetPid() int {
+	var pid int = -1
+	var cmdLine string = ""
+	var name string = ""
+	file, err := os.Open(c.Agent.PidFile)
+	if err != nil {
+		Logger.LogError(fmt.Sprintf("%s", err))
+		return -1
+	}
+	defer file.Close()
+	bytes, err := fmt.Fscanf(file, "%d %s", &pid, &name)
+	if err != nil && err != io.EOF || bytes < 1 {
+		Logger.LogError(fmt.Sprintf("%s [bytes : %d|file : %s]", err, bytes,
+			file.Name()))
+		return -1
+	}
+	cmdFile, err := os.Open(fmt.Sprintf("/proc/%d/cmdline", pid))
+	if err != nil {
+		Logger.LogError(fmt.Sprintf("%s", err))
+		return -1
+	}
+	defer cmdFile.Close()
+	bytes, err = fmt.Fscanf(cmdFile, "%s", &cmdLine)
+	if err != nil && err != io.EOF || bytes < 1 {
+		Logger.LogError(fmt.Sprintf("%s [bytes : %d|file : %s]", err, bytes,
+			cmdFile.Name()))
+		return -1
+	}
+	Logger.LogSystem(fmt.Sprintf("Find PID %d. His command - %s\n", pid, cmdLine))
+	cmdLineArray := strings.Split(cmdLine, "/")
+	cmd := cmdLineArray[len(cmdLineArray)-1]
+	cmd = cmd[:len(cmd)-1]
+	if cmd != name {
+		Logger.LogError(fmt.Sprintf(
+			"PID not map into agent [%s %s]", cmd, name))
+		return -1
+	}
+	return pid
 }
 
 // Function print Config as json format
