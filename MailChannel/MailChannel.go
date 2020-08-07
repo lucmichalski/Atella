@@ -180,13 +180,11 @@ func sendMessage(msg mailMessage) error {
 		err        error  = nil
 		d          *gomail.Dialer
 		conn       gomail.SendCloser
-		firstEmail bool = true
 	)
 
 	for i := 0; i < len(msg.Emails); i = i + 1 {
 		if msg.Emails[i] != "" {
-			if firstEmail {
-				firstEmail = false
+			if emails == "" {
 				emails = msg.Emails[i]
 			} else {
 				emails = fmt.Sprintf("%s, %s", emails, msg.Emails[i])

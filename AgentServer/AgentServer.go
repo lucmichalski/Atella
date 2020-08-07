@@ -120,15 +120,15 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 			AgentConfig.PrintJsonMasterVector()
 			AgentConfig.PrintJsonMasterVector()
 		case "set":
-			c.params.currentClientVectorJson = msg_map[1]
-			Logger.LogInfo(msg_map[1])
-			// if c.params.currentClientHostname != "" &&
-			// 	c.params.currentClientVectorJson != "" {
-			// 	m := new(AgentConfig.MasterVectorType)
-			// 	vec := new(AgentConfig.VectorType)
-			// 	json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
-			// 	AgentConfig.MasterVector[c.params.currentClientHostname] = *m
-			// }
+			c.params.currentClientHostname = msg_map[1]
+			c.params.currentClientVectorJson = msg_map[2]
+			if c.params.currentClientHostname != "" &&
+				c.params.currentClientVectorJson != "" {
+				// m := new(AgentConfig.MasterVectorType)
+				// vec := new(AgentConfig.VectorType)
+				// json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
+				// AgentConfig.MasterVector[c.params.currentClientHostname] = *m
+			}
 		}
 	} else if msg == "Meow!" {
 		Logger.LogInfo(fmt.Sprintf("Receive [%s], set canTalk -> true", msg))

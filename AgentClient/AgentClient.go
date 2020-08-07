@@ -131,7 +131,7 @@ func (c *ServerClient) Run() {
 				Logger.LogSystem("Client ready for reload")
 			}
 		}
-		time.Sleep(time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 }
@@ -261,13 +261,14 @@ func (c *ServerClient) sendVector() error {
 		c.masterconn, err = net.Dial("tcp", fmt.Sprintf("%s:5223",
 			c.conf.MasterServers.Hosts[currentMasterServerIndex]))
 		if err != nil {
-				currentMasterServerIndex = currentMasterServerIndex + 1
-				currentMasterServerIndex = currentMasterServerIndex %
-					len(c.conf.MasterServers.Hosts)
+			currentMasterServerIndex = currentMasterServerIndex + 1
+			currentMasterServerIndex = currentMasterServerIndex %
+				len(c.conf.MasterServers.Hosts)
 		} else {
 			_, err = c.masterconn.Write([]byte("Meow!\n"))
 			_, err = c.masterconn.Write(
-				[]byte(fmt.Sprintf("set %s\n", AgentConfig.GetJsonVector())))
+				[]byte(fmt.Sprintf("set %s %s\n", c.conf.Agent.Hostname,
+					AgentConfig.GetJsonVector())))
 			c.masterconn.Close()
 			masterServerIndex = currentMasterServerIndex
 			break

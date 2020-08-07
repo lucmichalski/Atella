@@ -50,7 +50,7 @@ type AgentConfig struct {
 	MessagePath  string `json:"message_path"`
 	Master       bool   `json:"master"`
 	Interval     int64  `json:"interval"`
-	NetTimeout   int  `json:"net_timeout"`
+	NetTimeout   int    `json:"net_timeout"`
 }
 
 type DatabaseConfig struct {
@@ -115,7 +115,11 @@ func (c *Config) SavePid() {
 		fullpath := "/"
 		for i := 0; i < len(path)-1; i = i + 1 {
 			if path[i] != "" {
-				fullpath = fmt.Sprintf("%s/%s", fullpath, path[i])
+				if fullpath == "" {
+					fullpath = fmt.Sprintf("/%s", path[i])
+				} else {
+					fullpath = fmt.Sprintf("%s/%s", fullpath, path[i])
+				}
 			}
 			_, err := os.Stat(fullpath)
 			Logger.LogSystem(fmt.Sprintf("Create [%s] [%s]", path[i], fullpath))
