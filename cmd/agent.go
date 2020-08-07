@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"../pkg/AgentClient"
-	"../pkg/AgentConfig"
-	"../pkg/AgentServer"
-	"../pkg/Database"
-	"../pkg/Logger"
+	"../AgentClient"
+	"../AgentConfig"
+	"../AgentServer"
+	"../Database"
+	"../Logger"
 )
 
 var (
@@ -125,7 +125,7 @@ func main() {
 	signal.Notify(c, syscall.SIGINT)
 	signal.Notify(c, syscall.SIGUSR1)
 	signal.Notify(c, syscall.SIGUSR2)
-	
+
 	go handle(c)
 
 	server := AgentServer.New(conf, "0.0.0.0:5223")
