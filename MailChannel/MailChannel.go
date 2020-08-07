@@ -1,29 +1,33 @@
 package MailChannel
 
 import (
+	"crypto/tls"
 	"fmt"
-	"net/smtp"
 	"regexp"
+
+	"gopkg.in/gomail.v2"
 
 	"../Logger"
 )
 
 // Mail message format.
 type mailMessage struct {
-	Emails []string `json:"emails"`
-	Text   string   `json:"text"`
+	Emails  []string `json:"emails"`
+	Text    string   `json:"text"`
+	Subject string   `json:"subject"`
 }
 
 // Mail Channel configuration.
 type MailConfig struct {
-	Address  string   `json:"address"`
-	Port     int16    `json:"port"`
-	Auth     bool     `json:"auth"`
-	Username string   `json:"username"`
-	Password string   `json:"password"`
-	From     string   `json:"from"`
-	To       []string `json:"to"`
-	Disabled bool     `json:"disbled"`
+	Address    string   `json:"address"`
+	Port       int16    `json:"port"`
+	Auth       bool     `json:"auth"`
+	Username   string   `json:"username"`
+	Password   string   `json:"password"`
+	From       string   `json:"from"`
+	To         []string `json:"to"`
+	Disabled   bool     `json:"disabled"`
+	NetTimeout int
 }
 
 // Mail Channel configuration.
@@ -37,6 +41,7 @@ type mailConfig struct {
 	to         []string
 	configured bool
 	disabled   bool
+	netTimeout int
 }
 
 var (
@@ -54,6 +59,7 @@ func MailInit(c MailConfig, hostname string) {
 	setMailFrom(c.From)
 	setMailTo(c.To)
 	setMailDisabled(c.Disabled)
+	setMailTimeout(c.NetTimeout)
 	setMailConfigured()
 
 	re := regexp.MustCompile(`@hostname$`)
@@ -61,6 +67,11 @@ func MailInit(c MailConfig, hostname string) {
 		fmt.Sprintf("@%s", hostname))
 	Logger.LogInfo(fmt.Sprintf("Init Mail Channel with params: [address: %s | port: %d]",
 		c.Address, c.Port))
+}
+
+// Function set net timeout.
+func setMailTimeout(timeout int) {
+	configMailChannel.netTimeout = timeout
 }
 
 // Function set channel status.
@@ -150,12 +161,13 @@ func MailSendMessage(text string, hostname string) (bool, error) {
 		return false, fmt.Errorf("Mail users list are empty")
 	}
 	msg := newMailMessage()
-	msg.Text = fmt.Sprintf("Subject: Message from agent at %s\n\r%s",
-		hostname, text)
+	msg.Subject = fmt.Sprintf("Subject: Message from agent at %s",
+		hostname)
+	msg.Text = text
 	msg.Emails = configMailChannel.to
 	err := sendMessage(*msg)
 	if err != nil {
-		return false, fmt.Errorf("%s", err)
+		return false, err
 	}
 	return true, nil
 }
@@ -163,14 +175,51 @@ func MailSendMessage(text string, hostname string) (bool, error) {
 // Function send message (text) via Mail Channel to user's emails , specifying
 // in Emails array. It is not exportable function
 func sendMessage(msg mailMessage) error {
-	err := smtp.SendMail(
-		fmt.Sprintf("%s:%d", configMailChannel.address, configMailChannel.port),
-		nil,
-		configMailChannel.from,
-		msg.Emails,
-		[]byte(msg.Text))
+	var (
+		emails     string = ""
+		err        error  = nil
+		d          *gomail.Dialer
+		conn       gomail.SendCloser
+		firstEmail bool = true
+	)
+
+	for i := 0; i < len(msg.Emails); i = i + 1 {
+		if msg.Emails[i] != "" {
+			if firstEmail {
+				firstEmail = false
+				emails = msg.Emails[i]
+			} else {
+				emails = fmt.Sprintf("%s, %s", emails, msg.Emails[i])
+			}
+		}
+	}
+	m := gomail.NewMessage()
+	m.SetHeader("From", configMailChannel.from)
+	m.SetHeader("To", emails)
+	m.SetHeader("Subject", msg.Text)
+	m.SetBody("text/html", msg.Text)
+
+	d = dialer()
+	conn, err = d.Dial()
+	if err != nil {
+		return err
+	}
+	err = gomail.Send(conn, m)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func dialer() (d *gomail.Dialer) {
+	c := configMailChannel
+	if c.username == "" {
+		d = &gomail.Dialer{Host: c.address, Port: int(c.port)}
+	} else {
+		d = gomail.NewPlainDialer(c.address, int(c.port), c.username, c.password)
+	}
+
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+
+	return d
 }

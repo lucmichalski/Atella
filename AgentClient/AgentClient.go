@@ -76,7 +76,7 @@ func (c *ServerClient) Run() {
 				vectorIndex := getVectorIndexByHost(currentNeighboursAddr)
 				vec.Host = currentNeighboursAddr
 				if err != nil {
-					Logger.LogError(fmt.Sprintf("%s", err))
+					Logger.LogWarning(fmt.Sprintf("%s", err))
 					vec.Status = false
 				} else {
 					exit = false

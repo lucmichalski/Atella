@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"strconv"
+	"time"
 
 	"../Logger"
 )
@@ -16,7 +16,8 @@ type TgSibnetConfig struct {
 	Port     int16    `json:"port"`
 	Protocol string   `json:"protocol"`
 	To       []string `json:"to"`
-	Disabled bool     `json:"disbled"`
+	Disabled bool     `json:"disabled"`
+	NetTimeout int    
 }
 
 // Message format for Sibnet TG bot.
@@ -40,6 +41,7 @@ type tgSibnetConfig struct {
 	to         []string
 	configured bool
 	disabled   bool
+	netTimeout int    
 }
 
 var (
@@ -53,10 +55,16 @@ func TgSibnetInit(c TgSibnetConfig) {
 	setTgSibnetPort(c.Port)
 	setTgSibnetTo(c.To)
 	setTgSibnetDisabled(c.Disabled)
+	setTgSibnetTimeout(c.NetTimeout)
 	setTgSibnetConfigured()
 	Logger.LogInfo(fmt.Sprintf("Init TgSibnetBot Channel with params: "+
 		"[address: %s | port: %d]",
 		c.Address, c.Port))
+}
+
+// Function set nee timeout
+func setTgSibnetTimeout(timeout int) {
+	configTgSibnetChannel.netTimeout = timeout
 }
 
 // Function set channel status.
@@ -141,8 +149,10 @@ func TgSibnetSendPersonalMessage(text string, hostname string) (bool,
 // Function send message (text) via TgSibnet Channel to users, specifying in
 // to array in config. It is not exportable function
 func sendMessage(msg tgSibnetMessage) (string, error) {
-	conn, err := net.Dial("tcp", configTgSibnetChannel.host+":"+
-		strconv.FormatInt(int64(configTgSibnetChannel.port), 10))
+	conn, err := net.DialTimeout("tcp",
+		fmt.Sprintf("%s:%d", configTgSibnetChannel.host,
+			configTgSibnetChannel.port),
+			time.Duration(configTgSibnetChannel.netTimeout)*time.Second)
 	if err != nil {
 		return "", fmt.Errorf("%s", err)
 	}

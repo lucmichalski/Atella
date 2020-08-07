@@ -50,6 +50,7 @@ type AgentConfig struct {
 	MessagePath  string `json:"message_path"`
 	Master       bool   `json:"master"`
 	Interval     int64  `json:"interval"`
+	NetTimeout   int  `json:"net_timeout"`
 }
 
 type DatabaseConfig struct {
@@ -389,10 +390,10 @@ func (c *Config) addChannel(name string, table *ast.Table) error {
 		Config:  nil}
 	switch name {
 	case "TgSibnet":
-		rp.Config = &TgSibnetChannel.TgSibnetConfig{}
+		rp.Config = &TgSibnetChannel.TgSibnetConfig{NetTimeout: c.Agent.NetTimeout}
 
 	case "Mail":
-		rp.Config = &MailChannel.MailConfig{}
+		rp.Config = &MailChannel.MailConfig{NetTimeout: c.Agent.NetTimeout}
 
 	default:
 		rp.Channel = name
