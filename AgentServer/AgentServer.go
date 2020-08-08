@@ -3,6 +3,8 @@ package AgentServer
 import (
 	"bufio"
 	"crypto/tls"
+	"encoding/json"
+
 	// "encoding/json"
 	"fmt"
 	"math"
@@ -101,6 +103,14 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 	case "quit", "exit":
 		c.Send(fmt.Sprintf("Bye!\n"))
 		return true
+	case "export":
+		if msg_map[1] == "vector" {
+			c.Send(fmt.Sprintf("%s\n", AgentConfig.GetJsonVector()))
+			AgentConfig.PrintJsonVector()
+		} else if msg_map[1] == "master" {
+			c.Send(fmt.Sprintf("%s\n", AgentConfig.GetJsonMasterVector()))
+			AgentConfig.PrintJsonMasterVector()
+		}
 	}
 	if c.params.canTalk == true {
 		Logger.LogInfo(fmt.Sprintf("Server receive [%s]", msg))
@@ -112,22 +122,14 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 			c.Send(fmt.Sprintf("ackhost %s\n", c.params.currentClientHostname))
 		case "hostname":
 			c.Send(fmt.Sprintf("%s\n", conf.Agent.Hostname))
-		case "vector":
-			c.Send(fmt.Sprintf("%s\n", AgentConfig.GetJsonVector()))
-			AgentConfig.PrintJsonVector()
-		case "mastervector":
-			c.Send(fmt.Sprintf("%s\n", AgentConfig.GetJsonMasterVector()))
-			AgentConfig.PrintJsonMasterVector()
-			AgentConfig.PrintJsonMasterVector()
 		case "set":
 			c.params.currentClientHostname = msg_map[1]
 			c.params.currentClientVectorJson = msg_map[2]
 			if c.params.currentClientHostname != "" &&
 				c.params.currentClientVectorJson != "" {
-				// m := new(AgentConfig.MasterVectorType)
-				// vec := new(AgentConfig.VectorType)
-				// json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
-				// AgentConfig.MasterVector[c.params.currentClientHostname] = *m
+				var vec []AgentConfig.VectorType
+				json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
+				AgentConfig.MasterVector[c.params.currentClientHostname] = vec
 			}
 		}
 	} else if msg == "Meow!" {
@@ -178,8 +180,10 @@ func (s *server) MasterServer() {
 	if conf.Agent.Master {
 		Logger.LogSystem("I'm master server")
 	}
-	AgentConfig.MasterVector = make(map[string]AgentConfig.VectorType, 0)
-	time.Sleep(time.Duration(conf.Agent.Interval) * time.Second)
+	AgentConfig.MasterVector = make(map[string][]AgentConfig.VectorType, 0)
+	for {
+		time.Sleep(time.Duration(conf.Agent.Interval) * time.Second)
+	}
 }
 
 func (c *server) insertVector() error {

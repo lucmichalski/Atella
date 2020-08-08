@@ -36,7 +36,7 @@ var (
 	)
 	Pid          int                   = 0
 	Vector       []VectorType          = make([]VectorType, 0)
-	MasterVector map[string]VectorType = make(map[string]VectorType, 0)
+	MasterVector map[string][]VectorType = make(map[string][]VectorType, 0)
 )
 
 type AgentConfig struct {
@@ -114,7 +114,7 @@ func (c *Config) SavePid() {
 		path := strings.Split(c.Agent.PidFile, "/")
 		fullpath := "/"
 		for i := 0; i < len(path)-1; i = i + 1 {
-			if path[i] != "" {
+			if path[i] != "" && path[i] != "/" {
 				if fullpath == "" {
 					fullpath = fmt.Sprintf("/%s", path[i])
 				} else {
@@ -196,7 +196,7 @@ func (c *Config) GetJsonConfig() []byte {
 // Function print Vector as json format
 func PrintJsonVector() {
 	res := GetJsonVector()
-	Logger.LogSystem(string(res))
+	Logger.LogSystem(fmt.Sprintf("Vector %s", string(res)))
 }
 
 // Function return Vector as json format
@@ -208,7 +208,7 @@ func GetJsonVector() []byte {
 // Function print MasterVector as json format
 func PrintJsonMasterVector() {
 	res := GetJsonMasterVector()
-	Logger.LogSystem(string(res))
+	Logger.LogSystem(fmt.Sprintf("Master Vector %s", string(res)))
 }
 
 // Function return MasterVector as json format

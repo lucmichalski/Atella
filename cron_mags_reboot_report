@@ -1,1 +1,1 @@
-@reboot root mags -r report -e reboot
+@reboot mags -mode reboot -target tgsibnet -runmode report

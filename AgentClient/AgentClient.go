@@ -2,6 +2,7 @@ package AgentClient
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net"
@@ -252,6 +253,9 @@ func elExists(array []string, item string) bool {
 func (c *ServerClient) sendVector() error {
 	var err error = nil
 	if c.conf.Agent.Master {
+		var vec []AgentConfig.VectorType
+		json.Unmarshal(AgentConfig.GetJsonVector(), &vec)
+		AgentConfig.MasterVector[c.conf.Agent.Hostname] = vec
 		return nil
 	}
 	if len(c.conf.MasterServers.Hosts) < 1 {
