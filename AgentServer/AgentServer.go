@@ -151,7 +151,7 @@ func (s *server) Listen() {
 		listener, err = tls.Listen("tcp", s.address, s.config)
 	}
 	if err != nil {
-		Logger.LogFatal("Error starting TCP server.")
+		Logger.LogFatal(fmt.Sprintf("Error starting TCP server. %s", err))
 	}
 	defer listener.Close()
 
@@ -183,6 +183,7 @@ func (s *server) MasterServer() {
 	AgentConfig.MasterVector = make(map[string][]AgentConfig.VectorType, 0)
 	for {
 		time.Sleep(time.Duration(conf.Agent.Interval) * time.Second)
+		s.insertVector()
 	}
 }
 
@@ -195,12 +196,18 @@ func (c *server) insertVector() error {
 	if err != nil {
 		return err
 	}
-	for _, mapEl := range AgentConfig.Vector {
-		for _, sec := range mapEl.Sectors {
-			fmt.Printf("INSERT vector_stat SET host=%s,server=%s,sector=%s,status=%v,timestamp=%d\n\n",
-				conf.Agent.Hostname, mapEl.Host, sec, mapEl.Status, time.Now().Unix())
-		}
-	}
+
+	Logger.LogSystem(fmt.Sprintf("INSERT vector SET master=%s, vector='%s'",
+	conf.Agent.Hostname, AgentConfig.GetJsonMasterVector()))
+
+	// for name, mapEl := range AgentConfig.MasterVector {
+	// 	for _, vec := range mapEl {
+	// 		for _, sec := range vec.Sectors {
+	// 			fmt.Printf("INSERT vector_stat SET host=%s,relay=%s,server=%s,sector=%s,status=%v,timestamp=%d\n\n",
+	// 				conf.Agent.Hostname, name, vec.Host, sec, vec.Status, time.Now().Unix())
+	// 		}
+	// 	}
+	// }
 
 	return nil
 }

@@ -7,6 +7,7 @@
 /*.json
 /*.env
 /.ruby-version
+/configs
 /hosts.dat
 /etc/*.conf
 /etc/conf.d/*.conf

@@ -18,6 +18,9 @@ services:
     container_name: mags_grafana
     hostname: grafana
     restart: always
+    depends_on:
+      - grafana_renderer
+      - grafana_mariadb
     env_file:
       - ./grafana.env
     ports:
@@ -72,6 +75,8 @@ services:
     container_name: mags_telegraf
     hostname: docker-telegraf
     restart: always
+    depends_on:
+      - influx
     volumes:
       - "./grafana-influxdb-docker/telegraf/etc/telegraf:/etc/telegraf"
     links: 
