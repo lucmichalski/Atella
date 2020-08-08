@@ -1,0 +1,104 @@
+version: "2.1"
+services:
+  clickhouse:
+    image: ${clickhouse_image}
+    container_name: mags_clickhouse
+    hostname: clickhouse
+    restart: always
+    volumes:
+      - "./clickhouse/etc/clickhouse-server/config.xml:/etc/clickhouse-server/config.xml"
+      - "./clickhouse/var/lib/clickhouse:/var/lib/clickhouse"
+    ports:
+      - "8123:8123/tcp"
+    networks:
+      network_1:
+        ipv4_address: 10.2.0.10
+  grafana:
+    image: ${grafana_image}
+    container_name: mags_grafana
+    hostname: grafana
+    restart: always
+    env_file:
+      - ./grafana.env
+    ports:
+      - "82:3000/tcp"
+    volumes:
+      - "./grafana-influxdb-docker/grafana/usr/share/grafana/conf:/usr/share/grafana/conf"
+      - "./grafana-influxdb-docker/grafana/usr/share/grafana/data:/usr/share/grafana/data"
+    links: 
+      - influx:influxdb
+      - grafana_mariadb:grafana_mariadb
+      - grafana_renderer:grafana_renderer
+    networks:
+      network_1:
+        ipv4_address: 10.2.0.3
+  influx:
+    image: ${influx_image}
+    container_name: mags_influx
+    hostname: influx
+    restart: always
+    ports:
+      - "8086:8086/tcp"
+    volumes:
+      - "./grafana-influxdb-docker/influx/etc/influxdb:/etc/influxdb"
+      - "./grafana-influxdb-docker/influx/var/lib/influxdb:/var/lib/influxdb"
+    networks:
+      network_1:
+        ipv4_address: 10.2.0.4
+  grafana_mariadb:
+    image: ${mariadb_image}
+    container_name: mags_grafana_mariadb
+    hostname: mariadb
+    restart: always
+    env_file:
+      - ./grafana_mariadb.env
+    volumes:
+      - "./grafana-influxdb-docker/mariadb/etc/mysql/mariadb.cnf:/etc/mysql/mariadb.cnf"
+      - "./grafana-influxdb-docker/mariadb/etc/mysql/mariadb.conf.d:/etc/mysql/mariadb.conf.d"
+      - "./grafana-influxdb-docker/mariadb/var/lib/mysql:/var/lib/mysql"
+    networks:
+      network_1:
+        ipv4_address: 10.2.0.5
+  grafana_renderer:
+    image: grafana/grafana-image-renderer:2.0.0
+    container_name: mags_grafana_renderer
+    hostname: renderer
+    restart: always
+    networks:
+      network_1:
+        ipv4_address: 10.2.0.6
+  telegraf:
+    image: ${telegraf_image}
+    container_name: mags_telegraf
+    hostname: docker-telegraf
+    restart: always
+    volumes:
+      - "./grafana-influxdb-docker/telegraf/etc/telegraf:/etc/telegraf"
+    links: 
+      - influx:influxdb
+    networks:
+      network_1:
+        ipv4_address: 10.2.0.254
+  mags_mariadb:
+    image: ${mariadb_image}
+    container_name: mags_mariadb
+    hostname: mariadb
+    restart: always
+    env_file:
+      - ./mags_mariadb.env
+    ports:
+      - "3306:3306"
+    networks:
+      network_1:
+        ipv4_address: 10.2.0.7
+
+networks:
+  network_1:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: "mags0"
+    ipam:
+      driver: default
+      config:
+      - subnet: 10.2.0.0/24
+        gateway: 10.2.0.1
