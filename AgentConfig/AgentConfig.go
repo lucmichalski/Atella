@@ -303,7 +303,7 @@ func (c *Config) LoadConfig(path string) error {
 		return fmt.Errorf("Error parsing %s, %s", path, err)
 	}
 
-	/* Parse agent table */
+	// Parse agent table
 	if val, ok := tbl.Fields["agent"]; ok {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
@@ -314,7 +314,7 @@ func (c *Config) LoadConfig(path string) error {
 		}
 	}
 
-	/* If hostname are not force-override try to get system hostname */
+	// If hostname are not force-override try to get system hostname
 	if !c.Agent.OmitHostname {
 		if c.Agent.Hostname == "" {
 			hostname, err := os.Hostname()
@@ -326,7 +326,7 @@ func (c *Config) LoadConfig(path string) error {
 		}
 	}
 
-	/* Parse database table */
+	// Parse database table
 	if val, ok := tbl.Fields["database"]; ok {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
@@ -337,7 +337,7 @@ func (c *Config) LoadConfig(path string) error {
 		}
 	}
 
-	/* Parse master_servers table */
+	// Parse master_servers table
 	if val, ok := tbl.Fields["master_servers"]; ok {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
