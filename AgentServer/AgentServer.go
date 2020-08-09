@@ -189,26 +189,11 @@ func (s *server) MasterServer() {
 
 func (c *server) insertVector() error {
 
-	var err error
-
-	db := Database.GetConnection()
-	err = db.Ping()
-	if err != nil {
-		return err
+	count, _ := Database.SelectQuery(fmt.Sprintf("SELECT * FROM vector WHERE master='%s'",
+		conf.Agent.Hostname))
+  if count > 0 {
+		
 	}
-
-	Logger.LogSystem(fmt.Sprintf("INSERT vector SET master=%s, vector='%s'",
-	conf.Agent.Hostname, AgentConfig.GetJsonMasterVector()))
-
-	// for name, mapEl := range AgentConfig.MasterVector {
-	// 	for _, vec := range mapEl {
-	// 		for _, sec := range vec.Sectors {
-	// 			fmt.Printf("INSERT vector_stat SET host=%s,relay=%s,server=%s,sector=%s,status=%v,timestamp=%d\n\n",
-	// 				conf.Agent.Hostname, name, vec.Host, sec, vec.Status, time.Now().Unix())
-	// 		}
-	// 	}
-	// }
-
 	return nil
 }
 

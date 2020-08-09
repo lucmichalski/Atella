@@ -55,18 +55,26 @@ func GetConnection() *sql.DB {
 	return base
 }
 
-func SelectQuery(q string) {
-
+func SelectQuery(q string) (int, error) {
+	var (
+		err   error = nil
+		count int   = -1
+	)
+	err = base.Ping()
+	if err != nil {
+		return count, err
+	}
+	return count, nil
 }
 
-func InsertQuery(q string) {
-
+func InsertQuery(q string) error {
+	return nil
 }
 
-func InsertOrUpdateQuery(q string) {
-
+func UpdateQuery(q string) error {
+	return nil
 }
 
 func Migrate() {
-	
+
 }

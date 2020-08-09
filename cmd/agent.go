@@ -25,6 +25,10 @@ var (
 	configDirPath  string                    = ""
 	target         string                    = "all"
 	client         *AgentClient.ServerClient = nil
+	printVersion   bool                      = false
+	Version                                  = "unknown"
+	GitCommit                                = "unknown"
+	GoVersion                                = "unknown"
 )
 
 func handle(c chan os.Signal) {
@@ -84,7 +88,16 @@ func initFlags() {
 			"Tgsibnet\n\t"+
 			"Mail\n\t"+
 			"Graphite\n")
+	flag.BoolVar(&printVersion, "version", false, "Print version and exit")
 	flag.Parse()
+	if printVersion {
+		fmt.Println("Mags")
+		fmt.Println("Version:", Version)
+		fmt.Println("Git Commit:", GitCommit)
+		fmt.Println("Go Version:", GoVersion)
+		os.Exit(0)
+	}
+
 }
 
 func main() {
@@ -135,7 +148,7 @@ func main() {
 	client = AgentClient.New(conf)
 	go client.Run()
 
-  go conf.Sender()
+	go conf.Sender()
 	for {
 		time.Sleep(10 * time.Second)
 	}
