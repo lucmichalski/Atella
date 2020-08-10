@@ -111,6 +111,8 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 			c.Send(fmt.Sprintf("%s\n", AgentConfig.GetJsonMasterVector()))
 			AgentConfig.PrintJsonMasterVector()
 		}
+	case "ping":
+		c.Send("pong")
 	}
 	if c.params.canTalk == true {
 		Logger.LogInfo(fmt.Sprintf("Server receive [%s]", msg))
