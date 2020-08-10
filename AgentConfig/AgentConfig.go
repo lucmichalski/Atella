@@ -34,8 +34,8 @@ var (
 		`"`, `\"`,
 		`\`, `\\`,
 	)
-	Pid          int                   = 0
-	Vector       []VectorType          = make([]VectorType, 0)
+	Pid          int                     = 0
+	Vector       []VectorType            = make([]VectorType, 0)
 	MasterVector map[string][]VectorType = make(map[string][]VectorType, 0)
 )
 
@@ -95,7 +95,8 @@ func NewConfig() *Config {
 			HexLen:       10,
 			MessagePath:  "/usr/local/mags/msg",
 			Master:       false,
-			Interval:     10},
+			Interval:     10,
+			NetTimeout:   2},
 		DB: &DatabaseConfig{},
 		MasterServers: &MasterServersConfig{
 			Hosts: make([]string, 0)},

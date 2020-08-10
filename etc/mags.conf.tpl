@@ -9,6 +9,7 @@
   message_path = "/usr/local/mags/msg"
   master = false
   interval = 10
+  net_timeout = 2
   
 # [channels.TgSibnet]
 #   address = "localhost"
