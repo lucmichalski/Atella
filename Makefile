@@ -53,10 +53,10 @@ ${EXECUTABLE}: ${SOURCES}
 tar:
 	rm -rf build/root
 	mkdir -p build/root/${SERVICE}/usr/bin 
-	mkdir -p build/root/${SERVICE}/etc/${SERVICE} 
+	mkdir -p build/root/${SERVICE}/etc/
 	mkdir -p build/root/${SERVICE}/usr/lib/systemd/system 
 	$(if ifeq ${ARCH} amd64, @cp build/${SERVICE}_${OS}_${ARCH} build/root/${SERVICE}/usr/bin/${SERVICE})
-	cp -r etc/ build/root/${SERVICE}/etc/${SERVICE} 
+	cp -r etc/ build/root/${SERVICE}/etc/${SERVICE}
 	cp pkg/${SERVICE}.service build/root/${SERVICE}/usr/lib/systemd/system/${SERVICE}.service 
 	tar -czvPf pkg/tar/${SERVICE}-${VERSION_RELEASE}.tar.gz -C build/root/${SERVICE} . 	
 
