@@ -93,7 +93,7 @@ func initFlags() {
 	flag.BoolVar(&printVersion, "version", false, "Print version and exit")
 	flag.Parse()
 	if printVersion {
-		fmt.Println(Service)
+		fmt.Println("Atella")
 		fmt.Println("Version:", Version)
 		fmt.Println("Git Commit:", GitCommit)
 		fmt.Println("Go Version:", GoVersion)

@@ -44,10 +44,10 @@ build: ${EXECUTABLE}
 ${EXECUTABLE}: ${SOURCES}
 	for arch in ${TARGET_ARCHS}; do \
 	  for os in ${TARGET_OSS}; do \
-		  CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(CC) -a -installsuffix cgo -ldflags "-X main.Service=${SERVICE} -X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o $(BIN_PATH)/$@_"$$os"_"$$arch" $(CFLAGS) $^; \
+		  CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(CC) -a -installsuffix cgo -ldflags "-X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o $(BIN_PATH)/$@_"$$os"_"$$arch" $(CFLAGS) $^; \
 		done; \
 	done
-	CGO_ENABLED=0 ${CC} -a -installsuffix cgo -ldflags "-X main.Service=${SERVICE} -X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o $(BIN_PATH)/$@ $(CFLAGS) $^;
+	CGO_ENABLED=0 ${CC} -a -installsuffix cgo -ldflags "-X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o $(BIN_PATH)/$@ $(CFLAGS) $^;
 
 .PHONY: tar
 tar:
