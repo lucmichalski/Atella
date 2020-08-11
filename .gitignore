@@ -1,4 +1,4 @@
-/bin
+/build
 /msg
 /rails
 /*.rb
@@ -12,3 +12,5 @@
 /etc/*.conf
 /etc/conf.d/*.conf
 /replicate.sh
+/*test*
+/pkg
