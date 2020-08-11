@@ -5,8 +5,8 @@ After=network-online.target
 
 [Service]
 ExecStart=/usr/bin/mags
-User=root
-Group=root
+User=mags
+Group=mags
 Restart=always
 TimeoutStopSec=30s
 LimitMEMLOCK=infinity

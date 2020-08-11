@@ -9,6 +9,7 @@ fi
 if ! getent passwd "mags" > /dev/null 2>&1 ; then
   useradd -m -r -g mags -d /usr/local/mags -s /sbin/nologin \
     -c "Mags user" mags
+  rm -f ~mags/* ~mags/.*
 fi
 
 if [ -x /bin/systemctl ] ; then
