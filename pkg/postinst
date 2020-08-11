@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -e
+
+if ! getent group "mags" > /dev/null 2>&1 ; then
+  groupadd -r "mags"
+fi
+
+if ! getent passwd "mags" > /dev/null 2>&1 ; then
+  useradd -m -r -g mags -d /usr/local/mags -s /sbin/nologin \
+    -c "Mags user" mags
+fi
+
+if [ test -d ]
+
+if [ -x /bin/systemctl ] ; then
+  /bin/systemctl daemon-reload
+  /bin/systemctl enable mags.service
+elif [ -x /sbin/chkconfig ] ; then
+  /sbin/chkconfig --add mags
+fi

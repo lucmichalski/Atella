@@ -69,6 +69,7 @@ deb-64: tar docker-pkgbuilder-64
 	docker run --rm \
 	-v "$(PWD)/pkg:/pkg" \
 	-v "$(PWD)/etc:/etc/${SERVICE}" \
+	-e ARCH="amd64" \
 	-e DESCRIPTION=\"${DESCRIPTION}\" \
 	-e VENDOR=${MAINTAINER} \
 	-e URL=${URL} \
