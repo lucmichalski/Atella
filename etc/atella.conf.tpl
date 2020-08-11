@@ -2,11 +2,11 @@
   hostname = ""
   omit_hostname = false
   log_level = 2
-  log_file = "/usr/local/atella/logs/atella.log"
-  pid_file = "/usr/local/atella/atella.pid"
+  log_file = "/usr/share/atella/logs/atella.log"
+  pid_file = "/usr/share/atella/atella.pid"
   host_cnt = 1
   hex_len = 10
-  message_path = "/usr/local/atella/msg"
+  message_path = "/usr/share/atella/msg"
   master = false
   interval = 10
   net_timeout = 2

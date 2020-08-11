@@ -30,6 +30,7 @@ type msg struct {
 
 type Reporter struct {
 	mux sync.Mutex
+	isLocked bool
 }
 
 var (
@@ -51,6 +52,7 @@ func RandomHex(n int64) (string, error) {
 func (conf *Config) Init() {
 	var rp interface{}
 	Logger.Init(conf.Agent.LogLevel, conf.Agent.LogFile)
+	reporter.isLocked = false
 	for i := range conf.Channels {
 		rp = conf.Channels[i].Config
 		switch conf.Channels[i].Channel {
@@ -85,7 +87,12 @@ func (conf *Config) Send() {
 		res     bool   = true
 		m       msg
 	)
+	if reporter.isLocked {
+		Logger.LogInfo("Sender iteration already in progress")
+		return
+	}
 	reporter.mux.Lock()
+	reporter.isLocked = true
 	Logger.LogInfo("Start sender iteration")
 	files, err := ioutil.ReadDir(conf.Agent.MessagePath)
 	if err != nil {
@@ -93,7 +100,7 @@ func (conf *Config) Send() {
 	}
 
 	for _, file := range files {
-		if !file.IsDir() && file.Name()[0] != '.' {
+		if !file.IsDir() && !strings.HasPrefix(file.Name(), ".") {
 			f, err := os.Open(fmt.Sprintf("%s/%s", conf.Agent.MessagePath, file.Name()))
 			if err != nil {
 				Logger.LogError(fmt.Sprintf("%s", err))
@@ -109,6 +116,7 @@ func (conf *Config) Send() {
 				message = message + string(data[:n])
 			}
 			f.Close()
+
 			err = json.Unmarshal(data, &m)
 			if err != nil {
 				Logger.LogError(fmt.Sprintf("%s", err))
@@ -135,12 +143,14 @@ func (conf *Config) Send() {
 				Logger.LogError(fmt.Sprintf("Unsopported channel - %s", target))
 				res = true
 			}
+
 			if res == true {
 				os.Remove(fmt.Sprintf("%s/%s", conf.Agent.MessagePath, file.Name()))
 			}
 		}
 	}
 	reporter.mux.Unlock()
+	reporter.isLocked = false
 }
 
 // Function save report as a file (filename are random hex string).

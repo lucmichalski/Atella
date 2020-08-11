@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"crypto/tls"
 	"encoding/json"
-
-	// "encoding/json"
 	"fmt"
 	"math"
 	"net"
@@ -193,8 +191,8 @@ func (c *server) insertVector() error {
 
 	count, _ := Database.SelectQuery(fmt.Sprintf("SELECT * FROM vector WHERE master='%s'",
 		conf.Agent.Hostname))
-  if count > 0 {
-		
+	if count > 0 {
+
 	}
 	return nil
 }

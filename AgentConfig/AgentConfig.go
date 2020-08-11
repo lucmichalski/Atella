@@ -88,12 +88,12 @@ func NewConfig() *Config {
 		Agent: &AgentConfig{
 			Hostname:     "",
 			OmitHostname: false,
-			LogFile:      "/usr/local/atella/logs/atella.log",
-			PidFile:      "/usr/local/atella/atella.pid",
-			LogLevel:     4,
+			LogFile:      "/usr/share/atella/logs/atella.log",
+			PidFile:      "/usr/share/atella/atella.pid",
+			LogLevel:     2,
 			HostCnt:      1,
 			HexLen:       10,
-			MessagePath:  "/usr/local/atella/msg",
+			MessagePath:  "/usr/share/atella/msg",
 			Master:       false,
 			Interval:     10,
 			NetTimeout:   2},
@@ -227,7 +227,8 @@ func (c *Config) LoadDirectory(path string) error {
 	}
 	walkfn := func(thispath string, info os.FileInfo, _ error) error {
 		if info == nil {
-			Logger.LogWarning(fmt.Sprintf("I don't have permissions to read %s", thispath))
+			Logger.LogWarning(fmt.Sprintf("I don't have permissions to read %s",
+				thispath))
 			return nil
 		}
 
@@ -237,6 +238,7 @@ func (c *Config) LoadDirectory(path string) error {
 			}
 			return nil
 		}
+
 		name := info.Name()
 		if len(name) < 6 || name[len(name)-5:] != ".conf" {
 			return nil
