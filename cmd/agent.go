@@ -29,6 +29,7 @@ var (
 	Version                                  = "unknown"
 	GitCommit                                = "unknown"
 	GoVersion                                = "unknown"
+	Service                                  = "Atella"
 )
 
 func handle(c chan os.Signal) {
@@ -91,7 +92,7 @@ func initFlags() {
 	flag.BoolVar(&printVersion, "version", false, "Print version and exit")
 	flag.Parse()
 	if printVersion {
-		fmt.Println("Mags")
+		fmt.Println(Service)
 		fmt.Println("Version:", Version)
 		fmt.Println("Git Commit:", GitCommit)
 		fmt.Println("Go Version:", GoVersion)
@@ -117,8 +118,7 @@ func main() {
 
 	if strings.ToLower(runMode) == "report" {
 		if strings.ToLower(reportType) == "reboot" {
-			reportMessage = fmt.Sprintf("Host [%s] has been power-on at [%s]",
-				conf.Agent.Hostname, time.Now())
+			reportMessage = fmt.Sprintf("Host has been power-on at [%s]", time.Now())
 		}
 		conf.Report(reportMessage, target)
 		os.Exit(0)

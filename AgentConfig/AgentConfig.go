@@ -88,12 +88,12 @@ func NewConfig() *Config {
 		Agent: &AgentConfig{
 			Hostname:     "",
 			OmitHostname: false,
-			LogFile:      "/usr/local/mags/logs/mags.log",
-			PidFile:      "/usr/local/mags/mags.pid",
+			LogFile:      "/usr/local/atella/logs/atella.log",
+			PidFile:      "/usr/local/atella/atella.pid",
 			LogLevel:     4,
 			HostCnt:      1,
 			HexLen:       10,
-			MessagePath:  "/usr/local/mags/msg",
+			MessagePath:  "/usr/local/atella/msg",
 			Master:       false,
 			Interval:     10,
 			NetTimeout:   2},
@@ -252,9 +252,9 @@ func (c *Config) LoadDirectory(path string) error {
 
 // Function return default config path if it exist
 func getDefaultConfigPath() (string, error) {
-	envfile := os.Getenv("MAGS_CONFIG_PATH")
-	homefile := os.ExpandEnv("${HOME}/.mags/mags.conf")
-	etcfile := "/etc/mags/mags.conf"
+	envfile := os.Getenv("ATELLA_CONFIG_PATH")
+	homefile := os.ExpandEnv("${HOME}/.atella/atella.conf")
+	etcfile := "/etc/atella/atella.conf"
 
 	for _, path := range []string{envfile, homefile, etcfile} {
 		if _, err := os.Stat(path); err == nil {
@@ -264,14 +264,14 @@ func getDefaultConfigPath() (string, error) {
 	}
 
 	return "", fmt.Errorf("No config file specified, and could not find one"+
-		" in $MAGS_CONFIG_PATH, %s, or %s", homefile, etcfile)
+		" in $ATELLA_CONFIG_PATH, %s, or %s", homefile, etcfile)
 }
 
 // Function return default config dir if it exist
 func getDefaultConfigDir() (string, error) {
-	envdir := os.Getenv("MAGS_CONFIG_DIR")
-	homedir := os.ExpandEnv("${HOME}/.mags/conf.d")
-	etcdir := "/etc/mags/conf.d"
+	envdir := os.Getenv("ATELLA_CONFIG_DIR")
+	homedir := os.ExpandEnv("${HOME}/.atella/conf.d")
+	etcdir := "/etc/atella/conf.d"
 
 	for _, path := range []string{envdir, homedir, etcdir} {
 		if _, err := os.Stat(path); err == nil {
@@ -281,7 +281,7 @@ func getDefaultConfigDir() (string, error) {
 	}
 
 	return "", fmt.Errorf("No config dir specified, and could not find one"+
-		" in $MAGS_CONFIG_DIR, %s, or %s", homedir, etcdir)
+		" in $ATELLA_CONFIG_DIR, %s, or %s", homedir, etcdir)
 }
 
 // Function loads configs from path

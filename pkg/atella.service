@@ -1,12 +1,12 @@
 [Unit]
-Description=Mags
+Description=Atella. Agent for distributed checking servers status.
 Wants=network-online.target
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/mags
-User=mags
-Group=mags
+ExecStart=/usr/bin/atella
+User=atella
+Group=atella
 Restart=always
 TimeoutStopSec=30s
 LimitMEMLOCK=infinity

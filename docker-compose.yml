@@ -2,7 +2,7 @@ version: "2.1"
 services:
   clickhouse:
     image: ${clickhouse_image}
-    container_name: mags_clickhouse
+    container_name: atella_clickhouse
     hostname: clickhouse
     restart: always
     volumes:
@@ -15,7 +15,7 @@ services:
         ipv4_address: 10.2.0.10
   grafana:
     image: ${grafana_image}
-    container_name: mags_grafana
+    container_name: atella_grafana
     hostname: grafana
     restart: always
     depends_on:
@@ -37,7 +37,7 @@ services:
         ipv4_address: 10.2.0.3
   influx:
     image: ${influx_image}
-    container_name: mags_influx
+    container_name: atella_influx
     hostname: influx
     restart: always
     ports:
@@ -50,7 +50,7 @@ services:
         ipv4_address: 10.2.0.4
   grafana_mariadb:
     image: ${mariadb_image}
-    container_name: mags_grafana_mariadb
+    container_name: atella_grafana_mariadb
     hostname: mariadb
     restart: always
     env_file:
@@ -64,7 +64,7 @@ services:
         ipv4_address: 10.2.0.5
   grafana_renderer:
     image: grafana/grafana-image-renderer:2.0.0
-    container_name: mags_grafana_renderer
+    container_name: atella_grafana_renderer
     hostname: renderer
     restart: always
     networks:
@@ -72,7 +72,7 @@ services:
         ipv4_address: 10.2.0.6
   telegraf:
     image: ${telegraf_image}
-    container_name: mags_telegraf
+    container_name: atella_telegraf
     hostname: docker-telegraf
     restart: always
     depends_on:
@@ -84,13 +84,13 @@ services:
     networks:
       network_1:
         ipv4_address: 10.2.0.254
-  mags_mariadb:
+  atella_mariadb:
     image: ${mariadb_image}
-    container_name: mags_mariadb
+    container_name: atella_mariadb
     hostname: mariadb
     restart: always
     env_file:
-      - ./mags_mariadb.env
+      - ./atella_mariadb.env
     ports:
       - "3306:3306"
     networks:
@@ -101,7 +101,7 @@ networks:
   network_1:
     driver: bridge
     driver_opts:
-      com.docker.network.bridge.name: "mags0"
+      com.docker.network.bridge.name: "atella"
     ipam:
       driver: default
       config:

@@ -1,1 +1,0 @@
-@reboot mags -mode reboot -target all -runmode report

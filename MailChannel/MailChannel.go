@@ -136,7 +136,7 @@ func newMailConfig() *mailConfig {
 	local.auth = false
 	local.username = "user"
 	local.password = "password"
-	local.from = "mags@hostname"
+	local.from = "atella@hostname"
 	local.configured = false
 	local.disabled = false
 	return local

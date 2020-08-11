@@ -1,0 +1,1 @@
+@reboot atella -mode reboot -target all -runmode report
