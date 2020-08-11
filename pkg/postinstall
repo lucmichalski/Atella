@@ -14,8 +14,7 @@ fi
 if [ -x /bin/systemctl ] ; then
   /bin/systemctl daemon-reload
   /bin/systemctl enable atella.service
-  /bin/systemctl status atella.service >> /dev/null 2>&1
-  if [ $? -eq 0 ]; then
+  if ! /bin/systemctl status atella.service > /dev/null 2>&1 ; then
       /bin/systemctl restart atella.service
   else
       /bin/systemctl start atella.service
