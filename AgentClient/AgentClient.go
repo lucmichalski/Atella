@@ -151,7 +151,10 @@ func (client *ServerClient) init(c *AgentConfig.Config) {
 	client.sectors = make([]int64, 0)
 	AgentConfig.Vector = make([]AgentConfig.VectorType, 0)
 
-	if !client.conf.Agent.Master {
+	if len(client.conf.MasterServers.Hosts) < 1 {
+		currentMasterServerIndex = -1
+		Logger.LogWarning(fmt.Sprintf("Master servers not specifiyed!"))
+	} else if !client.conf.Agent.Master {
 		masterServerIndex = rand.Int() % len(client.conf.MasterServers.Hosts)
 		currentMasterServerIndex = 0
 		Logger.LogSystem(fmt.Sprintf("Use [%s] as master server",
@@ -258,7 +261,7 @@ func (c *ServerClient) sendVector() error {
 		AgentConfig.MasterVector[c.conf.Agent.Hostname] = vec
 		return nil
 	}
-	if len(c.conf.MasterServers.Hosts) < 1 {
+	if currentMasterServerIndex < 0 {
 		return fmt.Errorf("Master servers not specifiyed")
 	}
 	for {
