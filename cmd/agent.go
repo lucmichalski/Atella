@@ -76,6 +76,7 @@ func initFlags() {
 		"Run mode. Possible values:\n\t"+
 			"Distributed\n\t"+
 			"Send\n\t"+
+			"Reload\n\t"+
 			"Report\n")
 	flag.StringVar(&reportMessage, "msg", "Test",
 		"Message. Work only with run mode \"Report\" & report type \"Custom\"")
@@ -126,6 +127,12 @@ func main() {
 		pid := conf.GetPid()
 		if pid > 0 {
 			syscall.Kill(pid, syscall.SIGUSR2)
+		}
+		os.Exit(0)
+	} else if strings.ToLower(runMode) == "reload" {
+		pid := conf.GetPid()
+		if pid > 0 {
+			syscall.Kill(pid, syscall.SIGHUP)
 		}
 		os.Exit(0)
 	}

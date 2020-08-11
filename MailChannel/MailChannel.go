@@ -161,7 +161,7 @@ func MailSendMessage(text string, hostname string) (bool, error) {
 		return false, fmt.Errorf("Mail users list are empty")
 	}
 	msg := newMailMessage()
-	msg.Subject = fmt.Sprintf("Subject: Message from agent at %s",
+	msg.Subject = fmt.Sprintf("Message from Atella at %s",
 		hostname)
 	msg.Text = text
 	msg.Emails = configMailChannel.to
@@ -194,7 +194,7 @@ func sendMessage(msg mailMessage) error {
 	m := gomail.NewMessage()
 	m.SetHeader("From", configMailChannel.from)
 	m.SetHeader("To", emails)
-	m.SetHeader("Subject", msg.Text)
+	m.SetHeader("Subject", msg.Subject)
 	m.SetBody("text/html", msg.Text)
 
 	d = dialer()

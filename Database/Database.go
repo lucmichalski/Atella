@@ -48,6 +48,7 @@ func Connect() {
 	}
 	if err != nil {
 		Logger.LogError(fmt.Sprintf("%s", err))
+		base = nil
 	}
 }
 
@@ -60,6 +61,9 @@ func SelectQuery(q string) (int, error) {
 		err   error = nil
 		count int   = -1
 	)
+	if base == nil {
+		return count, fmt.Errorf("Database does not exist")
+	}
 	err = base.Ping()
 	if err != nil {
 		return count, err
