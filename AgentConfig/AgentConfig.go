@@ -119,11 +119,10 @@ func (c *Config) SavePid() {
 				if fullpath == "" {
 					fullpath = fmt.Sprintf("/%s", path[i])
 				} else {
-					fullpath = fmt.Sprintf("%s/%s", fullpath, path[i])
+					fullpath = fmt.Sprintf("%s%s/", fullpath, path[i])
 				}
 			}
 			_, err := os.Stat(fullpath)
-			Logger.LogSystem(fmt.Sprintf("Create [%s] [%s]", path[i], fullpath))
 			if os.IsNotExist(err) {
 				os.MkdirAll(fullpath, 775)
 			}
