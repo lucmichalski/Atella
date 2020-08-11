@@ -14,5 +14,7 @@ fpm -t deb \
 	--iteration "1" \
 	--config-files "/etc/${SERVICE}/${SERVICE}.conf" \
 	--after-install "/pkg/postinst" \
+	--before-remove "/pkg/prerm" \
+	--after-remove "/pkg/postrm" \
 	-p /pkg/deb \
 	/pkg/tar/${SERVICE}-${VERSION_RELEASE}.tar.gz

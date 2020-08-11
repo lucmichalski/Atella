@@ -7,9 +7,9 @@ if ! getent group "atella" > /dev/null 2>&1 ; then
 fi
 
 if ! getent passwd "atella" > /dev/null 2>&1 ; then
-  useradd -m -r -g atella -d /usr/local/atella -s /sbin/nologin \
+  useradd -r -g atella -d /usr/local/atella -s /sbin/nologin \
     -c "Atella user" atella
-  rm -f ~atella/* ~atella/.*
+  mkdir -p /usr/local/atella
 fi
 
 if [ -x /bin/systemctl ] ; then
