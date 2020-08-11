@@ -1,7 +1,7 @@
 [agent]
   hostname = ""
   omit_hostname = false
-  log_level = 4
+  log_level = 2
   log_file = "/usr/local/mags/logs/mags.log"
   pid_file = "/usr/local/mags/mags.pid"
   host_cnt = 1
