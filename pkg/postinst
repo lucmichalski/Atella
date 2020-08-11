@@ -11,8 +11,6 @@ if ! getent passwd "mags" > /dev/null 2>&1 ; then
     -c "Mags user" mags
 fi
 
-if [ test -d ]
-
 if [ -x /bin/systemctl ] ; then
   /bin/systemctl daemon-reload
   /bin/systemctl enable mags.service
