@@ -1,4 +1,4 @@
-package AgentConfig
+package AtellaConfig
 
 import (
 	"crypto/rand"

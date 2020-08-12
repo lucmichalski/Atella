@@ -3,6 +3,7 @@
 /rails
 /*.rb
 /*.pid
+/*.proc
 /*.yml
 /*.json
 /*.env

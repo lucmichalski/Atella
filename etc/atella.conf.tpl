@@ -2,8 +2,9 @@
   hostname = ""
   omit_hostname = false
   log_level = 2
-  log_file = "/usr/share/atella/logs/atella.log"
+  log_file = "/var/log/atella/atella.log"
   pid_file = "/usr/share/atella/atella.pid"
+  proc_file = "/usr/share/atella/atella.proc"
   host_cnt = 1
   hex_len = 10
   message_path = "/usr/share/atella/msg"

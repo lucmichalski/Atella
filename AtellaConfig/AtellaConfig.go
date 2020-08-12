@@ -1,4 +1,4 @@
-package AgentConfig
+package AtellaConfig
 
 import (
 	"bytes"
@@ -39,11 +39,12 @@ var (
 	MasterVector map[string][]VectorType = make(map[string][]VectorType, 0)
 )
 
-type AgentConfig struct {
+type AtellaConfig struct {
 	Hostname     string `json:"hostname"`
 	OmitHostname bool   `json:"omit_hostname"`
 	LogFile      string `json:"log_file"`
 	PidFile      string `json:"pid_file"`
+	ProcFile     string `json:"proc_file"`
 	LogLevel     int64  `json:"log_level"`
 	HostCnt      int64  `json:"host_cnt"`
 	HexLen       int64  `json:"hex_len"`
@@ -76,7 +77,7 @@ type SectorConfig struct {
 }
 
 type Config struct {
-	Agent         *AgentConfig               `json:"AgentSection"`
+	Agent         *AtellaConfig              `json:"AgentSection"`
 	Channels      map[string]*ChannelsConfig `json:"ChannelsSection"`
 	Sectors       []*SectorsConfig           `json:"SectorsSection"`
 	DB            *DatabaseConfig            `json:"DatabaseSection"`
@@ -85,11 +86,12 @@ type Config struct {
 
 func NewConfig() *Config {
 	local := &Config{
-		Agent: &AgentConfig{
+		Agent: &AtellaConfig{
 			Hostname:     "",
 			OmitHostname: false,
-			LogFile:      "/usr/share/atella/logs/atella.log",
+			LogFile:      "/var/log/atella/atella.log",
 			PidFile:      "/usr/share/atella/atella.pid",
+			ProcFile:      "/usr/share/atella/atella.proc",
 			LogLevel:     2,
 			HostCnt:      1,
 			HexLen:       10,
@@ -108,11 +110,31 @@ func NewConfig() *Config {
 
 // Function save procces ID to file, specifyied as pidFilePath.
 func (c *Config) SavePid() {
+	var err error
 	Pid = os.Getpid()
 
-	_, err := os.Stat(c.Agent.PidFile)
+	_, err = os.Stat(c.Agent.PidFile)
 	if os.IsNotExist(err) {
 		path := strings.Split(c.Agent.PidFile, "/")
+		fullpath := "/"
+		for i := 0; i < len(path)-1; i = i + 1 {
+			if path[i] != "" && path[i] != "/" {
+				if fullpath == "" {
+					fullpath = fmt.Sprintf("/%s", path[i])
+				} else {
+					fullpath = fmt.Sprintf("%s%s/", fullpath, path[i])
+				}
+			}
+			_, err = os.Stat(fullpath)
+			if os.IsNotExist(err) {
+				os.MkdirAll(fullpath, 775)
+			}
+		}
+	}
+
+	_, err = os.Stat(c.Agent.ProcFile)
+	if os.IsNotExist(err) {
+		path := strings.Split(c.Agent.ProcFile, "/")
 		fullpath := "/"
 		for i := 0; i < len(path)-1; i = i + 1 {
 			if path[i] != "" && path[i] != "/" {
@@ -129,14 +151,22 @@ func (c *Config) SavePid() {
 		}
 	}
 
-	file, err := os.OpenFile(c.Agent.PidFile,
+	pidFile, err := os.OpenFile(c.Agent.PidFile,
 		os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		Logger.LogFatal(fmt.Sprintf("%s", err))
 	}
-	defer file.Close()
+
+	procFile, err := os.OpenFile(c.Agent.ProcFile,
+		os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
+	if err != nil {
+		Logger.LogFatal(fmt.Sprintf("%s", err))
+	}
+	defer procFile.Close()
+	defer pidFile.Close()
 	name := strings.Split(os.Args[0], "/")
-	file.WriteString(fmt.Sprintf("%d %s", Pid, name[len(name)-1]))
+	pidFile.WriteString(fmt.Sprintf("%d", Pid))
+	procFile.WriteString(fmt.Sprintf("%s", name[len(name)-1]))
 	Logger.LogSystem(fmt.Sprintf("Running with PID %d\n", Pid))
 }
 
@@ -145,18 +175,32 @@ func (c *Config) GetPid() int {
 	var pid int = -1
 	var cmdLine string = ""
 	var name string = ""
+	var err error = nil
 	file, err := os.Open(c.Agent.PidFile)
 	if err != nil {
 		Logger.LogError(fmt.Sprintf("%s", err))
 		return -1
 	}
 	defer file.Close()
-	bytes, err := fmt.Fscanf(file, "%d %s", &pid, &name)
+	bytes, err := fmt.Fscanf(file, "%d", &pid)
 	if err != nil && err != io.EOF || bytes < 1 {
 		Logger.LogError(fmt.Sprintf("%s [bytes : %d|file : %s]", err, bytes,
 			file.Name()))
 		return -1
 	}
+	procFile, err := os.Open(c.Agent.ProcFile)
+	if err != nil {
+		Logger.LogError(fmt.Sprintf("%s", err))
+		return -1
+	}
+	defer procFile.Close()
+	bytes, err = fmt.Fscanf(procFile, "%s", &name)
+	if err != nil && err != io.EOF || bytes < 1 {
+		Logger.LogError(fmt.Sprintf("%s [bytes : %d|file : %s]", err, bytes,
+			file.Name()))
+		return -1
+	}
+
 	cmdFile, err := os.Open(fmt.Sprintf("/proc/%d/cmdline", pid))
 	if err != nil {
 		Logger.LogError(fmt.Sprintf("%s", err))

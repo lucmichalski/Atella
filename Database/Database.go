@@ -4,17 +4,17 @@ import (
 	"database/sql"
 	"fmt"
 
-	"../AgentConfig"
+	"../AtellaConfig"
 	"../Logger"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 var (
 	base *sql.DB             = nil
-	conf *AgentConfig.Config = nil
+	conf *AtellaConfig.Config = nil
 )
 
-func Init(c *AgentConfig.Config) {
+func Init(c *AtellaConfig.Config) {
 	conf = c
 	if conf.DB.Type != "" {
 		Logger.LogInfo(fmt.Sprintf("Init db with [%s:%s@%s:%d/%s]",
@@ -24,7 +24,7 @@ func Init(c *AgentConfig.Config) {
 	}
 }
 
-func Reload(c *AgentConfig.Config) {
+func Reload(c *AtellaConfig.Config) {
 	if base != nil {
 		base.Close()
 	}

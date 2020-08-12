@@ -9,23 +9,24 @@ import (
 	"syscall"
 	"time"
 
-	"../AgentClient"
-	"../AgentConfig"
-	"../AgentServer"
+	"../AtellaClient"
+	"../AtellaConfig"
+	"../AtellaServer"
 	"../Database"
 	"../Logger"
 )
 
 var (
-	conf           *AgentConfig.Config       = nil
+	conf           *AtellaConfig.Config       = nil
 	runMode        string                    = "Distributed"
 	reportMessage  string                    = "Test"
 	reportType     string                    = "Test"
 	configFilePath string                    = ""
 	configDirPath  string                    = ""
 	target         string                    = "all"
-	client         *AgentClient.ServerClient = nil
+	client         *AtellaClient.ServerClient = nil
 	printVersion   bool                      = false
+	printPidFilePath bool	= false
 	Version                                  = "unknown"
 	GitCommit                                = "unknown"
 	GoVersion                                = "unknown"
@@ -70,9 +71,9 @@ func initFlags() {
 	flag.Usage = usage
 	flag.StringVar(&configFilePath, "config", "",
 		"Path to config")
-	flag.StringVar(&configDirPath, "configdir", "",
+	flag.StringVar(&configDirPath, "config-directory", "",
 		"Path to config directory")
-	flag.StringVar(&runMode, "runmode", "Distributed",
+	flag.StringVar(&runMode, "run-mode", "Distributed",
 		"Run mode. Possible values:\n\t"+
 			"Distributed\n\t"+
 			"Send\n\t"+
@@ -80,23 +81,33 @@ func initFlags() {
 			"Report\n")
 	flag.StringVar(&reportMessage, "msg", "Test",
 		"Message. Work only with run mode \"Report\" & report type \"Custom\"")
-	flag.StringVar(&reportType, "mode", "Test",
-		"Report mode. Possible values:\n\t"+
+	flag.StringVar(&reportType, "msg-mode", "Test",
+		"Report type. Possible values:\n\t"+
 			"Reboot\n\t"+
 			"Custom\n")
-	flag.StringVar(&target, "target", "all",
+	flag.StringVar(&target, "msg-target", "all",
 		"Report target. Possible values:\n\t"+
 			"All\n\t"+
 			"Tgsibnet\n\t"+
 			"Mail\n\t"+
 			"Graphite\n")
 	flag.BoolVar(&printVersion, "version", false, "Print version and exit")
+	flag.BoolVar(&printPidFilePath, "print-pid-file-path", false,
+	 "Print pid file path and exit")
 	flag.Parse()
 	if printVersion {
 		fmt.Println("Atella")
 		fmt.Println("Version:", Version)
 		fmt.Println("Git Commit:", GitCommit)
 		fmt.Println("Go Version:", GoVersion)
+		os.Exit(0)
+	} else if printPidFilePath {
+	  conf := AtellaConfig.NewConfig()
+	  err := conf.LoadConfig(configFilePath)
+		if err != nil {
+			Logger.LogFatal(fmt.Sprintf("%s", err))
+		}
+		fmt.Println(conf.Agent.PidFile)
 		os.Exit(0)
 	}
 
@@ -105,7 +116,7 @@ func initFlags() {
 func main() {
 	var err error = nil
 	initFlags()
-	conf = AgentConfig.NewConfig()
+	conf = AtellaConfig.NewConfig()
 	err = conf.LoadConfig(configFilePath)
 	if err != nil {
 		Logger.LogFatal(fmt.Sprintf("%s", err))
@@ -148,11 +159,11 @@ func main() {
 
 	go handle(c)
 
-	server := AgentServer.New(conf, "0.0.0.0:5223")
+	server := AtellaServer.New(conf, "0.0.0.0:5223")
 	go server.Listen()
 	go server.MasterServer()
 
-	client = AgentClient.New(conf)
+	client = AtellaClient.New(conf)
 	go client.Run()
 
 	go conf.Sender()

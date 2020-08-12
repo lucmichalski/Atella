@@ -1,4 +1,4 @@
-package AgentClient
+package AtellaClient
 
 import (
 	"bufio"
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"../AgentConfig"
+	"../AtellaConfig"
 	"../Logger"
 )
 
@@ -23,7 +23,7 @@ var (
 type ServerClient struct {
 	conn       net.Conn
 	masterconn net.Conn
-	conf       *AgentConfig.Config
+	conf       *AtellaConfig.Config
 	neighbours []string
 	sectors    []int64
 }
@@ -56,7 +56,7 @@ func (c *ServerClient) Run() {
 		status                bool     = false
 		currentNeighboursInd  int      = 0
 		currentNeighboursAddr string   = ""
-		vec                   AgentConfig.VectorType
+		vec                   AtellaConfig.VectorType
 	)
 
 	for {
@@ -117,9 +117,9 @@ func (c *ServerClient) Run() {
 							c.Close()
 							vec.Status = status
 							if vectorIndex < 0 {
-								AgentConfig.Vector = append(AgentConfig.Vector, vec)
+								AtellaConfig.Vector = append(AtellaConfig.Vector, vec)
 							} else {
-								AgentConfig.Vector[vectorIndex] = vec
+								AtellaConfig.Vector[vectorIndex] = vec
 							}
 							break
 						}
@@ -138,18 +138,18 @@ func (c *ServerClient) Run() {
 }
 
 // Init client
-func New(c *AgentConfig.Config) *ServerClient {
+func New(c *AtellaConfig.Config) *ServerClient {
 	client := &ServerClient{}
 	client.init(c)
 	return client
 }
 
-func (client *ServerClient) init(c *AgentConfig.Config) {
+func (client *ServerClient) init(c *AtellaConfig.Config) {
 	client.conn = nil
 	client.conf = c
 	client.neighbours = make([]string, 0)
 	client.sectors = make([]int64, 0)
-	AgentConfig.Vector = make([]AgentConfig.VectorType, 0)
+	AtellaConfig.Vector = make([]AtellaConfig.VectorType, 0)
 
 	if len(client.conf.MasterServers.Hosts) < 1 {
 		currentMasterServerIndex = -1
@@ -165,7 +165,7 @@ func (client *ServerClient) init(c *AgentConfig.Config) {
 	Logger.LogSystem("Init client side")
 }
 
-func (client *ServerClient) Reload(c *AgentConfig.Config) {
+func (client *ServerClient) Reload(c *AtellaConfig.Config) {
 	Logger.LogSystem("Client request reload")
 	StopRequest = true
 	for !StopReply {
@@ -208,17 +208,17 @@ func (c *ServerClient) GetSector() {
 
 // Function add non-existing host in vector and neighbours array
 func (c *ServerClient) AddHost(host string, sector string) {
-	var vec AgentConfig.VectorType
+	var vec AtellaConfig.VectorType
 	index := getVectorIndexByHost(host)
 	if !elExists(c.neighbours, host) {
 		c.neighbours = append(c.neighbours, host)
 		if index < 0 {
-			vec = AgentConfig.VectorType{
+			vec = AtellaConfig.VectorType{
 				Host:    host,
 				Status:  false,
 				Sectors: make([]string, 0)}
 		} else {
-			vec = AgentConfig.Vector[index]
+			vec = AtellaConfig.Vector[index]
 		}
 		if !elExists(vec.Sectors, sector) {
 			vec.Sectors = append(vec.Sectors,
@@ -226,18 +226,18 @@ func (c *ServerClient) AddHost(host string, sector string) {
 		}
 
 		if index < 0 {
-			AgentConfig.Vector = append(AgentConfig.Vector, vec)
+			AtellaConfig.Vector = append(AtellaConfig.Vector, vec)
 		} else {
-			AgentConfig.Vector[index] = vec
+			AtellaConfig.Vector[index] = vec
 		}
 		Logger.LogInfo(fmt.Sprintf("Added host [%s]", host))
 	} else {
-		vec = AgentConfig.Vector[index]
+		vec = AtellaConfig.Vector[index]
 		if !elExists(vec.Sectors, sector) {
 			vec.Sectors = append(vec.Sectors,
 				sector)
 		}
-		AgentConfig.Vector[index] = vec
+		AtellaConfig.Vector[index] = vec
 		Logger.LogInfo(fmt.Sprintf("Added sector [%s] for host [%s]", sector, host))
 	}
 }
@@ -256,9 +256,9 @@ func elExists(array []string, item string) bool {
 func (c *ServerClient) sendVector() error {
 	var err error = nil
 	if c.conf.Agent.Master {
-		var vec []AgentConfig.VectorType
-		json.Unmarshal(AgentConfig.GetJsonVector(), &vec)
-		AgentConfig.MasterVector[c.conf.Agent.Hostname] = vec
+		var vec []AtellaConfig.VectorType
+		json.Unmarshal(AtellaConfig.GetJsonVector(), &vec)
+		AtellaConfig.MasterVector[c.conf.Agent.Hostname] = vec
 		return nil
 	}
 	if currentMasterServerIndex < 0 {
@@ -275,7 +275,7 @@ func (c *ServerClient) sendVector() error {
 			_, err = c.masterconn.Write([]byte("Meow!\n"))
 			_, err = c.masterconn.Write(
 				[]byte(fmt.Sprintf("set %s %s\n", c.conf.Agent.Hostname,
-					AgentConfig.GetJsonVector())))
+					AtellaConfig.GetJsonVector())))
 			c.masterconn.Close()
 			masterServerIndex = currentMasterServerIndex
 			break
@@ -290,8 +290,8 @@ func (c *ServerClient) sendVector() error {
 
 // Function retur index in vector array if element exist. Else return -1
 func getVectorIndexByHost(host string) int {
-	for i := 0; i < len(AgentConfig.Vector); i = i + 1 {
-		if AgentConfig.Vector[i].Host == host {
+	for i := 0; i < len(AtellaConfig.Vector); i = i + 1 {
+		if AtellaConfig.Vector[i].Host == host {
 			return i
 		}
 	}

@@ -1,4 +1,4 @@
-package AgentServer
+package AtellaServer
 
 import (
 	"bufio"
@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"../AgentConfig"
+	"../AtellaConfig"
 	"../Database"
 	"../Logger"
 )
@@ -36,7 +36,7 @@ type server struct {
 
 var (
 	global uint64              = 0
-	conf   *AgentConfig.Config = nil
+	conf   *AtellaConfig.Config = nil
 )
 
 // Read client data from channel
@@ -103,11 +103,11 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 		return true
 	case "export":
 		if msg_map[1] == "vector" {
-			c.Send(fmt.Sprintf("%s\n", AgentConfig.GetJsonVector()))
-			AgentConfig.PrintJsonVector()
+			c.Send(fmt.Sprintf("%s\n", AtellaConfig.GetJsonVector()))
+			AtellaConfig.PrintJsonVector()
 		} else if msg_map[1] == "master" {
-			c.Send(fmt.Sprintf("%s\n", AgentConfig.GetJsonMasterVector()))
-			AgentConfig.PrintJsonMasterVector()
+			c.Send(fmt.Sprintf("%s\n", AtellaConfig.GetJsonMasterVector()))
+			AtellaConfig.PrintJsonMasterVector()
 		}
 	case "ping":
 		c.Send("pong")
@@ -127,9 +127,9 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 			c.params.currentClientVectorJson = msg_map[2]
 			if c.params.currentClientHostname != "" &&
 				c.params.currentClientVectorJson != "" {
-				var vec []AgentConfig.VectorType
+				var vec []AtellaConfig.VectorType
 				json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
-				AgentConfig.MasterVector[c.params.currentClientHostname] = vec
+				AtellaConfig.MasterVector[c.params.currentClientHostname] = vec
 			}
 		}
 	} else if msg == "Meow!" {
@@ -166,7 +166,7 @@ func (s *server) Listen() {
 	}
 }
 
-func New(c *AgentConfig.Config, address string) *server {
+func New(c *AtellaConfig.Config, address string) *server {
 	conf = c
 	Logger.LogSystem(fmt.Sprintf("Init server side with address %s", address))
 	server := &server{
@@ -180,7 +180,7 @@ func (s *server) MasterServer() {
 	if conf.Agent.Master {
 		Logger.LogSystem("I'm master server")
 	}
-	AgentConfig.MasterVector = make(map[string][]AgentConfig.VectorType, 0)
+	AtellaConfig.MasterVector = make(map[string][]AtellaConfig.VectorType, 0)
 	for {
 		time.Sleep(time.Duration(conf.Agent.Interval) * time.Second)
 		s.insertVector()
