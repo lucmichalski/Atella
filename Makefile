@@ -30,7 +30,7 @@ MAINTAINER := R9ODT
 VERSION_RELEASE := ${GIT_TAG}.${GIT_COMMIT}
 
 .PHONY: all 
-all: build tar
+all: build
 
 .PHONY: DIRECTORY 
 DIRECTORY: ${BIN_PATH}
