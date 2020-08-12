@@ -1,7 +1,0 @@
-#!/bin/sh
-
-set -e
-
-if [ -x /bin/systemctl ] ; then
-  /bin/systemctl stop atella.service
-fi
