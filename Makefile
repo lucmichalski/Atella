@@ -39,7 +39,7 @@ ${BIN_PATH}:
 	$(if ifeq test -d "${BIN_PATH}" 0, @mkdir -p ${BIN_PATH})
 
 .PHONY: build 
-build: ${EXECUTABLE}
+build: testbuild ${EXECUTABLE}
 
 .PHONY: testbuild 
 testbuild: ${SOURCES}
