@@ -41,23 +41,27 @@ ${BIN_PATH}:
 .PHONY: build 
 build: ${EXECUTABLE}
 
+.PHONY: testbuild 
+testbuild: ${SOURCES}
+	CGO_ENABLED=0 ${CC} -a -installsuffix cgo -ldflags "-X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o $(BIN_PATH)/$@ $(CFLAGS) $^;
+
 ${EXECUTABLE}: ${SOURCES}
 	for arch in ${TARGET_ARCHS}; do \
 	  for os in ${TARGET_OSS}; do \
 		  CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(CC) -a -installsuffix cgo -ldflags "-X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o $(BIN_PATH)/$@_"$$os"_"$$arch" $(CFLAGS) $^; \
 		done; \
 	done
-	CGO_ENABLED=0 ${CC} -a -installsuffix cgo -ldflags "-X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o $(BIN_PATH)/$@ $(CFLAGS) $^;
 
-.PHONY: tar
-tar:
+.PHONY: tar-deb
+tar-deb:
 	rm -rf build/root
 	mkdir -p build/root/${SERVICE}/usr/bin 
 	mkdir -p build/root/${SERVICE}/etc/
-	mkdir -p build/root/${SERVICE}/usr/lib/systemd/system 
+	mkdir -p build/root/${SERVICE}/usr/lib/atella/scripts
 	$(if ifeq ${ARCH} amd64, @cp build/${SERVICE}_${OS}_${ARCH} build/root/${SERVICE}/usr/bin/${SERVICE})
 	cp -r etc/ build/root/${SERVICE}/etc/${SERVICE}
-	cp pkg/${SERVICE}.service build/root/${SERVICE}/usr/lib/systemd/system/${SERVICE}.service 
+	cp pkg/atella.service build/root/${SERVICE}/usr/lib/atella/scripts/
+	cp pkg/init.sh build/root/${SERVICE}/usr/lib/atella/scripts/
 	tar -czvPf pkg/tar/${SERVICE}-${VERSION_RELEASE}.tar.gz -C build/root/${SERVICE} . 	
 
 .PHONY: docker-pkgbuilder-64
@@ -65,7 +69,7 @@ docker-pkgbuilder-64:
 	docker build -t ${SERVICE}-deb-pkgbuilder-64 -f docker/Dockerfile.deb-pkgbuilder-64 ./docker
 
 .PHONY: deb-64
-deb-64: tar docker-pkgbuilder-64
+deb-64: tar-deb docker-pkgbuilder-64
 	docker run --rm \
 	-v "$(PWD)/pkg:/pkg" \
 	-v "$(PWD)/etc:/etc/${SERVICE}" \
