@@ -37,6 +37,10 @@ if [[ ! -f /etc/atella/atella.conf ]] && [[ -f /etc/atella/atella.conf.tpl ]]; t
    cp /etc/atella/atella.conf.tpl /etc/atella/atella.conf
 fi
 
+if [[ ! -f $LOGROTATE_DIR/atella ]] ; then
+   cp $SCRIPT_DIR/atella.logrotate $LOGROTATE_DIR/atella
+fi
+
 test -d $LOG_DIR || mkdir -p $LOG_DIR
 chown -R -L atella:atella $LOG_DIR
 chmod 755 $LOG_DIR

@@ -62,6 +62,7 @@ tar-deb:
 	cp -r etc/ build/root/${SERVICE}/etc/${SERVICE}
 	cp pkg/atella.service build/root/${SERVICE}/usr/lib/atella/scripts/
 	cp pkg/init.sh build/root/${SERVICE}/usr/lib/atella/scripts/
+	cp pkg/atella.logrotate build/root/${SERVICE}/usr/lib/atella/scripts/
 	tar -czvPf pkg/tar/${SERVICE}-${VERSION_RELEASE}.tar.gz -C build/root/${SERVICE} . 	
 
 .PHONY: docker-pkgbuilder-64
