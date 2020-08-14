@@ -35,8 +35,9 @@ type server struct {
 }
 
 var (
-	global uint64              = 0
-	conf   *AtellaConfig.Config = nil
+	global                   uint64               = 0
+	conf                     *AtellaConfig.Config = nil
+	currentMasterServerIndex int                  = 0
 )
 
 // Read client data from channel
@@ -78,7 +79,7 @@ func (c *ServerClient) Close() error {
 
 func (s *server) OnNewClient(c *ServerClient) {
 	Logger.LogInfo(fmt.Sprintf("New connect [%d], can talk with him - %t", global, c.params.canTalk))
-	c.Send("Meow?\n")
+	// c.Send("Meow?\n")
 	c.params.id = global
 	global = global + 1
 	if global == math.MaxInt64 {
@@ -94,52 +95,72 @@ func (s *server) OnClientConnectionClosed(c *ServerClient, err error) {
 
 func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 	var (
-		msg     = strings.TrimRight(message, "\r\n")
-		msg_map = strings.Split(msg, " ")
+		msg    = strings.TrimRight(message, "\r\n")
+		msgMap = strings.Split(msg, " ")
 	)
-	switch msg_map[0] {
+	switch msgMap[0] {
 	case "quit", "exit":
 		c.Send(fmt.Sprintf("Bye!\n"))
 		return true
 	case "export":
-		if msg_map[1] == "vector" {
-			c.Send(fmt.Sprintf("%s\n", AtellaConfig.GetJsonVector()))
-			AtellaConfig.PrintJsonVector()
-		} else if msg_map[1] == "master" {
-			c.Send(fmt.Sprintf("%s\n", AtellaConfig.GetJsonMasterVector()))
-			AtellaConfig.PrintJsonMasterVector()
+		if len(msgMap) > 1 {
+			if msgMap[1] == "vector" {
+				c.Send(fmt.Sprintf("%s\n", AtellaConfig.GetJsonVector()))
+				AtellaConfig.PrintJsonVector()
+			} else if msgMap[1] == "master" {
+				c.Send(fmt.Sprintf("%s\n", AtellaConfig.GetJsonMasterVector()))
+				AtellaConfig.PrintJsonMasterVector()
+			}
 		}
 	case "ping":
 		c.Send("pong")
 	}
 	if c.params.canTalk == true {
 		Logger.LogInfo(fmt.Sprintf("Server receive [%s]", msg))
-		switch msg_map[0] {
+		switch msgMap[0] {
 		case "who":
 			c.Send(fmt.Sprintf("Id: %d\n", c.params.id))
 		case "host":
-			c.params.currentClientHostname = msg_map[1]
-			c.Send(fmt.Sprintf("ackhost %s\n", c.params.currentClientHostname))
+			if len(msgMap) > 1 {
+				c.params.currentClientHostname = msgMap[1]
+				c.Send(fmt.Sprintf("ackhost %s\n", c.params.currentClientHostname))
+			}
 		case "hostname":
 			c.Send(fmt.Sprintf("%s\n", conf.Agent.Hostname))
+		case "version":
+			c.Send(fmt.Sprintf("%s\n", AtellaConfig.Version))
+		case "help":
+			c.help()
 		case "set":
-			c.params.currentClientHostname = msg_map[1]
-			c.params.currentClientVectorJson = msg_map[2]
-			if c.params.currentClientHostname != "" &&
-				c.params.currentClientVectorJson != "" {
-				var vec []AtellaConfig.VectorType
-				json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
-				AtellaConfig.MasterVector[c.params.currentClientHostname] = vec
+			if len(msgMap) > 2 {
+				c.params.currentClientHostname = msgMap[1]
+				c.params.currentClientVectorJson = msgMap[2]
+				if c.params.currentClientHostname != "" &&
+					c.params.currentClientVectorJson != "" {
+					var vec []AtellaConfig.VectorType
+					json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
+					AtellaConfig.MasterVector[c.params.currentClientHostname] = vec
+				}
 			}
 		}
-	} else if msg == "Meow!" {
-		Logger.LogInfo(fmt.Sprintf("Receive [%s], set canTalk -> true", msg))
+	} else if msg == "CodePhrase" {
+		Logger.LogInfo(fmt.Sprintf("Server receive [%s], set canTalk -> true", msg))
 		c.Send("canTalk\n")
 		c.params.canTalk = true
 	} else {
-		Logger.LogInfo(fmt.Sprintf("Receive [%s], can't talk - ignore", msg))
+		Logger.LogInfo(fmt.Sprintf("Server receive [%s], can't talk - ignore", msg))
 	}
 	return false
+}
+
+func (c *ServerClient) help() {
+	c.Send("ping\n")
+	c.Send("export {vector/master}\n")
+	c.Send("host {hostname}\n")
+	c.Send("hostname\n")
+	c.Send("version\n")
+	c.Send("set {hostname} {vector}\n")
+	c.Send("exit\n")
 }
 
 func (s *server) Listen() {
@@ -171,8 +192,7 @@ func New(c *AtellaConfig.Config, address string) *server {
 	Logger.LogSystem(fmt.Sprintf("Init server side with address %s", address))
 	server := &server{
 		address: address,
-		config:  nil,
-	}
+		config:  nil}
 	return server
 }
 

@@ -37,6 +37,14 @@ var (
 	Pid          int                     = 0
 	Vector       []VectorType            = make([]VectorType, 0)
 	MasterVector map[string][]VectorType = make(map[string][]VectorType, 0)
+	CurrentMasterServerIndex int  = 0
+
+	GitCommit string = "unknown"
+	GoVersion string = "unknown"
+	Version   string = "unknown"
+	Service   string = "Atella"
+	Arch      string = "unknown"
+	Sys       string = "unknown"
 )
 
 type AtellaConfig struct {
@@ -91,7 +99,7 @@ func NewConfig() *Config {
 			OmitHostname: false,
 			LogFile:      "/var/log/atella/atella.log",
 			PidFile:      "/usr/share/atella/atella.pid",
-			ProcFile:      "/usr/share/atella/atella.proc",
+			ProcFile:     "/usr/share/atella/atella.proc",
 			LogLevel:     2,
 			HostCnt:      1,
 			HexLen:       10,
@@ -107,7 +115,6 @@ func NewConfig() *Config {
 
 	return local
 }
-
 // Function save procces ID to file, specifyied as pidFilePath.
 func (c *Config) SavePid() {
 	var err error

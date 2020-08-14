@@ -2,11 +2,8 @@ CC := go build
 CFLAGS := -v
 BIN_PATH := ./build
 SRC_PATH := ./cmd
-GOPATH := $(SRC_PATH)
-SOURCES=$(wildcard $(SRC_PATH)/*.go)
-# OBJECTS=$(patsubst $(SRC_PATH)%, $(OBJ_PATH)%, $(SOURCES:.c=.o))
-TARGET_ARCHS := amd64 386
-TARGET_OSS := linux
+GOPATH := ${SRC_PATH}
+
 SERVICE := atella
 DESCRIPTION := "Atella. Agent for distributed checking servers status"
 EXECUTABLE := ${SERVICE}
@@ -15,6 +12,7 @@ URL := "https://github.com/JIexa24/Atella"
 
 ARCH := amd64
 OS := linux
+SYS := deb
 
 GIT_BRANCH := "unknown"
 GIT_HASH := $(shell git log --pretty=format:%H -n 1)
@@ -32,28 +30,21 @@ VERSION_RELEASE := ${GIT_TAG}.${GIT_COMMIT}
 .PHONY: all 
 all: build
 
-.PHONY: DIRECTORY 
-DIRECTORY: ${BIN_PATH}
-
-${BIN_PATH}:
-	$(if ifeq test -d "${BIN_PATH}" 0, @mkdir -p ${BIN_PATH})
-
 .PHONY: build 
-build: testbuild ${EXECUTABLE}
+build: testbuild
+	for s in `ls ${SRC_PATH}`; do \
+		CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} $(CC) -a -installsuffix cgo -ldflags "-X main.Sys=${SYS} -X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o ${BIN_PATH}/"$$s"_"${OS}"_"${ARCH}" ${CFLAGS} ${SRC_PATH}/$$s/$$s.go; \
+	done
 
 .PHONY: testbuild 
-testbuild: ${SOURCES}
-	CGO_ENABLED=0 ${CC} -a -installsuffix cgo -ldflags "-X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o $(BIN_PATH)/$@ $(CFLAGS) $^;
-
-${EXECUTABLE}: ${SOURCES}
-	for arch in ${TARGET_ARCHS}; do \
-	  for os in ${TARGET_OSS}; do \
-		  CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(CC) -a -installsuffix cgo -ldflags "-X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o $(BIN_PATH)/$@_"$$os"_"$$arch" $(CFLAGS) $^; \
-		done; \
+testbuild: 
+	for s in `ls ${SRC_PATH}`; do \
+		CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} $(CC) -a -installsuffix cgo -ldflags "-X main.Sys=${SYS} -X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o ${BIN_PATH}/"$$s" ${CFLAGS} ${SRC_PATH}/$$s/$$s.go; \
 	done
 
 .PHONY: tar-deb
 tar-deb:
+	make build SYS=deb
 	rm -rf build/root
 	mkdir -p build/root/${SERVICE}/usr/bin 
 	mkdir -p build/root/${SERVICE}/etc/
@@ -85,7 +76,7 @@ deb-64: tar-deb docker-pkgbuilder-64
 
 .PHONY: clean 
 clean:
-	rm -rf $(BIN_PATH)
+	rm -rf $(BIN_PATH)/*
 
 .PHONY: restruct 
 restruct: clean all

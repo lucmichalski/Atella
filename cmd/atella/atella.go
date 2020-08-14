@@ -5,34 +5,38 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
 
-	"../AtellaClient"
-	"../AtellaConfig"
-	"../AtellaServer"
-	"../Database"
-	"../Logger"
+	"../../AtellaClient"
+	"../../AtellaConfig"
+	"../../AtellaServer"
+	"../../Database"
+	"../../Logger"
 )
 
 var (
-	conf           *AtellaConfig.Config       = nil
-	runMode        string                    = "Distributed"
-	reportMessage  string                    = "Test"
-	reportType     string                    = "Test"
-	configFilePath string                    = ""
-	configDirPath  string                    = ""
-	target         string                    = "all"
-	client         *AtellaClient.ServerClient = nil
-	printVersion   bool                      = false
-	printPidFilePath bool	= false
-	Version                                  = "unknown"
-	GitCommit                                = "unknown"
-	GoVersion                                = "unknown"
-	Service                                  = "Atella"
+	conf             *AtellaConfig.Config       = nil
+	runMode          string                     = "Distributed"
+	reportMessage    string                     = "Test"
+	reportType       string                     = "Test"
+	configFilePath   string                     = ""
+	configDirPath    string                     = ""
+	target           string                     = "all"
+	client           *AtellaClient.ServerClient = nil
+	printVersion     bool                       = false
+	printPidFilePath bool                       = false
+	GitCommit        string                     = "unknown"
+	GoVersion        string                     = "unknown"
+	Version          string                     = "unknown"
+	Service          string                     = "Atella"
+	Arch             string                     = "unknown"
+	Sys              string                     = "unknown"
 )
 
+// Interrupts handler
 func handle(c chan os.Signal) {
 	for {
 		sig := <-c
@@ -68,6 +72,7 @@ func usage() {
 
 // Function initialize application runtime flags.
 func initFlags() {
+	Arch = runtime.GOARCH
 	flag.Usage = usage
 	flag.StringVar(&configFilePath, "config", "",
 		"Path to config")
@@ -79,13 +84,13 @@ func initFlags() {
 			"Send\n\t"+
 			"Reload\n\t"+
 			"Report\n")
-	flag.StringVar(&reportMessage, "msg", "Test",
+	flag.StringVar(&reportMessage, "report-message", "Test",
 		"Message. Work only with run mode \"Report\" & report type \"Custom\"")
-	flag.StringVar(&reportType, "msg-mode", "Test",
+	flag.StringVar(&reportType, "report-type", "Test",
 		"Report type. Possible values:\n\t"+
 			"Reboot\n\t"+
 			"Custom\n")
-	flag.StringVar(&target, "msg-target", "all",
+	flag.StringVar(&target, "report-target", "all",
 		"Report target. Possible values:\n\t"+
 			"All\n\t"+
 			"Tgsibnet\n\t"+
@@ -93,17 +98,20 @@ func initFlags() {
 			"Graphite\n")
 	flag.BoolVar(&printVersion, "version", false, "Print version and exit")
 	flag.BoolVar(&printPidFilePath, "print-pid-file-path", false,
-	 "Print pid file path and exit")
+		"Print pid file path and exit")
 	flag.Parse()
+
 	if printVersion {
 		fmt.Println("Atella")
 		fmt.Println("Version:", Version)
+		fmt.Println("Arch:", Arch)
+		fmt.Println("Packet Sys:", Sys)
 		fmt.Println("Git Commit:", GitCommit)
 		fmt.Println("Go Version:", GoVersion)
 		os.Exit(0)
 	} else if printPidFilePath {
-	  conf := AtellaConfig.NewConfig()
-	  err := conf.LoadConfig(configFilePath)
+		conf := AtellaConfig.NewConfig()
+		err := conf.LoadConfig(configFilePath)
 		if err != nil {
 			Logger.LogFatal(fmt.Sprintf("%s", err))
 		}
@@ -111,6 +119,12 @@ func initFlags() {
 		os.Exit(0)
 	}
 
+	AtellaConfig.GitCommit = GitCommit
+	AtellaConfig.GoVersion = GoVersion
+	AtellaConfig.Version = Version
+	AtellaConfig.Service = Service
+	AtellaConfig.Arch = Arch
+	AtellaConfig.Sys = Sys
 }
 
 func main() {
@@ -158,7 +172,7 @@ func main() {
 	signal.Notify(c, syscall.SIGUSR2)
 
 	go handle(c)
-
+	Logger.LogSystem(fmt.Sprintf("Started Atella v%s", AtellaConfig.Version))
 	server := AtellaServer.New(conf, "0.0.0.0:5223")
 	go server.Listen()
 	go server.MasterServer()
@@ -167,8 +181,9 @@ func main() {
 	go client.Run()
 
 	go conf.Sender()
+
 	for {
-		time.Sleep(10 * time.Second)
+		time.Sleep(time.Minute)
 	}
 	//	os.Exit(0)
 }

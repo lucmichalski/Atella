@@ -14,10 +14,9 @@ import (
 )
 
 var (
-	StopRequest              bool = false
-	StopReply                bool = false
-	masterServerIndex        int  = 0
-	currentMasterServerIndex int  = 0
+	StopRequest       bool = false
+	StopReply         bool = false
+	masterServerIndex int  = 0
 )
 
 type ServerClient struct {
@@ -52,7 +51,7 @@ func (c *ServerClient) Run() {
 		err                   error    = nil
 		exit                  bool     = false
 		msg                   string   = ""
-		msg_map               []string = []string{}
+		msgMap                []string = []string{}
 		status                bool     = false
 		currentNeighboursInd  int      = 0
 		currentNeighboursAddr string   = ""
@@ -66,7 +65,8 @@ func (c *ServerClient) Run() {
 		} else {
 			currentNeighboursAddr = c.neighbours[currentNeighboursInd]
 			if currentNeighboursInd == 0 {
-				err = c.sendVector()
+				err = c.SendToMaster(fmt.Sprintf("set %s %s\n", c.conf.Agent.Hostname,
+					AtellaConfig.GetJsonVector()))
 				if err != nil {
 					Logger.LogError(fmt.Sprintf("%s", err))
 				}
@@ -82,36 +82,18 @@ func (c *ServerClient) Run() {
 				} else {
 					exit = false
 					connbuf := bufio.NewReader(c.conn)
+					err = c.Send("CodePhrase\n")
+					if err != nil {
+						status = false
+						exit = true
+						Logger.LogError(fmt.Sprintf("%s", err))
+					}
 					for {
-						message, _ := connbuf.ReadString('\n')
-						msg = strings.TrimRight(message, "\r\n")
-						msg_map = strings.Split(msg, " ")
-
-						Logger.LogInfo(fmt.Sprintf("Client receive [%s]", msg))
-						switch msg_map[0] {
-						case "Meow?":
-							err = c.Send("Meow!\n")
-							if err != nil {
-								status = false
-								exit = true
-								Logger.LogError(fmt.Sprintf("%s", err))
-							}
-						case "canTalk":
-							err = c.Send(fmt.Sprintf("host %s\n", c.conf.Agent.Hostname))
-							if err != nil {
-								status = false
-								exit = true
-								Logger.LogError(fmt.Sprintf("%s", err))
-							}
-						case "ackhost":
-							status = true
-							err = c.Send("exit\n")
-							if err != nil {
-								exit = true
-								Logger.LogError(fmt.Sprintf("%s", err))
-							}
-						case "Bye!":
+						message, err := connbuf.ReadString('\n')
+						if err != nil {
+							status = false
 							exit = true
+							Logger.LogError(fmt.Sprintf("%s", err))
 						}
 						if exit {
 							c.Close()
@@ -122,6 +104,34 @@ func (c *ServerClient) Run() {
 								AtellaConfig.Vector[vectorIndex] = vec
 							}
 							break
+						}
+
+						msg = strings.TrimRight(message, "\r\n")
+						msgMap = strings.Split(msg, " ")
+
+						Logger.LogInfo(fmt.Sprintf("Client receive [%s]", msg))
+						switch msgMap[0] {
+						// case "Meow?":
+						case "canTalk":
+							err = c.Send(fmt.Sprintf("host %s\n", c.conf.Agent.Hostname))
+							if err != nil {
+								status = false
+								exit = true
+								Logger.LogError(fmt.Sprintf("%s", err))
+							}
+						case "ackhost":
+							if msgMap[1] == c.conf.Agent.Hostname {
+								status = true
+							} else {
+								status = false
+							}
+							err = c.Send("exit\n")
+							if err != nil {
+								exit = true
+								Logger.LogError(fmt.Sprintf("%s", err))
+							}
+						case "Bye!":
+							exit = true
 						}
 					}
 				}
@@ -152,11 +162,11 @@ func (client *ServerClient) init(c *AtellaConfig.Config) {
 	AtellaConfig.Vector = make([]AtellaConfig.VectorType, 0)
 
 	if len(client.conf.MasterServers.Hosts) < 1 {
-		currentMasterServerIndex = -1
+		AtellaConfig.CurrentMasterServerIndex = -1
 		Logger.LogWarning(fmt.Sprintf("Master servers not specifiyed!"))
 	} else if !client.conf.Agent.Master {
 		masterServerIndex = rand.Int() % len(client.conf.MasterServers.Hosts)
-		currentMasterServerIndex = 0
+		AtellaConfig.CurrentMasterServerIndex = 0
 		Logger.LogSystem(fmt.Sprintf("Use [%s] as master server",
 			client.conf.MasterServers.Hosts[masterServerIndex]))
 	}
@@ -253,7 +263,7 @@ func elExists(array []string, item string) bool {
 }
 
 // Function send vector to one of master servers
-func (c *ServerClient) sendVector() error {
+func (c *ServerClient) SendToMaster(query string) error {
 	var err error = nil
 	if c.conf.Agent.Master {
 		var vec []AtellaConfig.VectorType
@@ -261,26 +271,26 @@ func (c *ServerClient) sendVector() error {
 		AtellaConfig.MasterVector[c.conf.Agent.Hostname] = vec
 		return nil
 	}
-	if currentMasterServerIndex < 0 {
+	if AtellaConfig.CurrentMasterServerIndex < 0 {
 		return fmt.Errorf("Master servers not specifiyed")
 	}
 	for {
 		c.masterconn, err = net.Dial("tcp", fmt.Sprintf("%s:5223",
-			c.conf.MasterServers.Hosts[currentMasterServerIndex]))
+			c.conf.MasterServers.Hosts[AtellaConfig.CurrentMasterServerIndex]))
 		if err != nil {
-			currentMasterServerIndex = currentMasterServerIndex + 1
-			currentMasterServerIndex = currentMasterServerIndex %
-				len(c.conf.MasterServers.Hosts)
+			AtellaConfig.CurrentMasterServerIndex =
+				AtellaConfig.CurrentMasterServerIndex + 1
+			AtellaConfig.CurrentMasterServerIndex =
+				AtellaConfig.CurrentMasterServerIndex %
+					len(c.conf.MasterServers.Hosts)
 		} else {
 			_, err = c.masterconn.Write([]byte("Meow!\n"))
-			_, err = c.masterconn.Write(
-				[]byte(fmt.Sprintf("set %s %s\n", c.conf.Agent.Hostname,
-					AtellaConfig.GetJsonVector())))
+			_, err = c.masterconn.Write([]byte(query))
 			c.masterconn.Close()
-			masterServerIndex = currentMasterServerIndex
+			masterServerIndex = AtellaConfig.CurrentMasterServerIndex
 			break
 		}
-		if currentMasterServerIndex == masterServerIndex {
+		if AtellaConfig.CurrentMasterServerIndex == masterServerIndex {
 			return fmt.Errorf("Could not connect to any of masters")
 		}
 	}
