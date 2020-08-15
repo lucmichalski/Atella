@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"../Logger"
-	"../MailChannel"
-	"../TgSibnetChannel"
+	"../AtellaLogger"
+	"../AtellaMailChannel"
+	"../AtellaTgSibnetChannel"
 )
 
 // Abstract Channels configuration.
@@ -29,7 +29,7 @@ type msg struct {
 }
 
 type Reporter struct {
-	mux sync.Mutex
+	mux      sync.Mutex
 	isLocked bool
 }
 
@@ -51,17 +51,19 @@ func RandomHex(n int64) (string, error) {
 // Init empty channels configuration
 func (conf *Config) Init() {
 	var rp interface{}
-	Logger.Init(conf.Agent.LogLevel, conf.Agent.LogFile)
+	AtellaLogger.Init(conf.Agent.LogLevel, conf.Agent.LogFile)
 	reporter.isLocked = false
 	for i := range conf.Channels {
 		rp = conf.Channels[i].Config
 		switch conf.Channels[i].Channel {
 		case "TgSibnet":
-			TgSibnetChannel.TgSibnetInit(*rp.(*TgSibnetChannel.TgSibnetConfig))
+			AtellaTgSibnetChannel.AtellaTgSibnetInit(
+				*rp.(*AtellaTgSibnetChannel.AtellaTgSibnetConfig))
 		case "Mail":
-			MailChannel.MailInit(*rp.(*MailChannel.MailConfig), conf.Agent.Hostname)
+			AtellaMailChannel.AtellaMailInit(
+				*rp.(*AtellaMailChannel.AtellaMailConfig), conf.Agent.Hostname)
 		default:
-			Logger.LogWarning(fmt.Sprintf("Unknown channel %s",
+			AtellaLogger.LogWarning(fmt.Sprintf("Unknown channel %s",
 				conf.Channels[i].Channel))
 		}
 	}
@@ -88,22 +90,23 @@ func (conf *Config) Send() {
 		m       msg
 	)
 	if reporter.isLocked {
-		Logger.LogInfo("Sender iteration already in progress")
+		AtellaLogger.LogInfo("Sender iteration already in progress")
 		return
 	}
 	reporter.mux.Lock()
 	reporter.isLocked = true
-	Logger.LogInfo("Start sender iteration")
+	AtellaLogger.LogInfo("Start sender iteration")
 	files, err := ioutil.ReadDir(conf.Agent.MessagePath)
 	if err != nil {
-		Logger.LogError(fmt.Sprintf("%s", err))
+		AtellaLogger.LogError(fmt.Sprintf("%s", err))
 	}
 
 	for _, file := range files {
 		if !file.IsDir() && !strings.HasPrefix(file.Name(), ".") {
-			f, err := os.Open(fmt.Sprintf("%s/%s", conf.Agent.MessagePath, file.Name()))
+			f, err := os.Open(fmt.Sprintf("%s/%s", conf.Agent.MessagePath,
+				file.Name()))
 			if err != nil {
-				Logger.LogError(fmt.Sprintf("%s", err))
+				AtellaLogger.LogError(fmt.Sprintf("%s", err))
 				continue
 			}
 			data := make([]byte, file.Size())
@@ -119,28 +122,30 @@ func (conf *Config) Send() {
 
 			err = json.Unmarshal(data, &m)
 			if err != nil {
-				Logger.LogError(fmt.Sprintf("%s", err))
+				AtellaLogger.LogError(fmt.Sprintf("%s", err))
 			}
-			Logger.LogInfo(fmt.Sprintf("Read msg - %s [msg: %s|target: %s]", file.Name(), m.Message, m.Target))
+			AtellaLogger.LogInfo(fmt.Sprintf("Read msg - %s [msg: %s|target: %s]",
+				file.Name(), m.Message, m.Target))
 
 			target = strings.ToLower(m.Target)
 			if target == "tgsibnet" {
 				if conf.Channels["TgSibnet"] != nil {
-					res, err = TgSibnetChannel.TgSibnetSendPersonalMessage(m.Message,
-						conf.Agent.Hostname)
+					res, err = AtellaTgSibnetChannel.AtellaTgSibnetSendPersonalMessage(
+						m.Message, conf.Agent.Hostname)
 					if err != nil {
-						Logger.LogError(fmt.Sprintf("%s", err))
+						AtellaLogger.LogError(fmt.Sprintf("%s", err))
 					}
 				}
 			} else if target == "mail" {
 				if conf.Channels["Mail"] != nil {
-					res, err = MailChannel.MailSendMessage(m.Message, conf.Agent.Hostname)
+					res, err = AtellaMailChannel.AtellaMailSendMessage(
+						m.Message, conf.Agent.Hostname)
 					if err != nil {
-						Logger.LogError(fmt.Sprintf("%s", err))
+						AtellaLogger.LogError(fmt.Sprintf("%s", err))
 					}
 				}
 			} else {
-				Logger.LogError(fmt.Sprintf("Unsopported channel - %s", target))
+				AtellaLogger.LogError(fmt.Sprintf("Unsopported channel - %s", target))
 				res = true
 			}
 
@@ -181,7 +186,7 @@ func (conf *Config) Report(message string, target string) string {
 		}
 		file, err = os.Create(path)
 		if err != nil {
-			Logger.LogError(fmt.Sprintf("Unable to create file: %s", err))
+			AtellaLogger.LogError(fmt.Sprintf("Unable to create file: %s", err))
 		}
 
 		defer file.Close()
@@ -189,7 +194,8 @@ func (conf *Config) Report(message string, target string) string {
 		m.Target = targets[i]
 		js, _ := json.Marshal(m)
 		file.Write([]byte(js))
-		Logger.LogInfo(fmt.Sprintf("File - %s [msg: %s|target: %s]", path, message, targets[i]))
+		AtellaLogger.LogInfo(fmt.Sprintf("File - %s [msg: %s|target: %s]",
+			path, message, targets[i]))
 	}
 	return hash
 }

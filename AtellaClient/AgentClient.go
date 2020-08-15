@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"../AtellaConfig"
-	"../Logger"
+	"../AtellaLogger"
 )
 
 var (
@@ -60,7 +60,7 @@ func (c *ServerClient) Run() {
 
 	for {
 		if len(c.neighbours) < 1 {
-			Logger.LogInfo("No neighbours")
+			AtellaLogger.LogInfo("No neighbours")
 			StopReply = true
 		} else {
 			currentNeighboursAddr = c.neighbours[currentNeighboursInd]
@@ -68,7 +68,7 @@ func (c *ServerClient) Run() {
 				err = c.SendToMaster(fmt.Sprintf("set %s %s\n", c.conf.Agent.Hostname,
 					AtellaConfig.GetJsonVector()))
 				if err != nil {
-					Logger.LogError(fmt.Sprintf("%s", err))
+					AtellaLogger.LogError(fmt.Sprintf("%s", err))
 				}
 			}
 			if !StopRequest {
@@ -77,7 +77,7 @@ func (c *ServerClient) Run() {
 				vectorIndex := getVectorIndexByHost(currentNeighboursAddr)
 				vec.Host = currentNeighboursAddr
 				if err != nil {
-					Logger.LogWarning(fmt.Sprintf("%s", err))
+					AtellaLogger.LogWarning(fmt.Sprintf("%s", err))
 					vec.Status = false
 				} else {
 					exit = false
@@ -86,14 +86,14 @@ func (c *ServerClient) Run() {
 					if err != nil {
 						status = false
 						exit = true
-						Logger.LogError(fmt.Sprintf("%s", err))
+						AtellaLogger.LogError(fmt.Sprintf("%s", err))
 					}
 					for {
 						message, err := connbuf.ReadString('\n')
 						if err != nil {
 							status = false
 							exit = true
-							Logger.LogError(fmt.Sprintf("%s", err))
+							AtellaLogger.LogError(fmt.Sprintf("%s", err))
 						}
 						if exit {
 							c.Close()
@@ -109,7 +109,7 @@ func (c *ServerClient) Run() {
 						msg = strings.TrimRight(message, "\r\n")
 						msgMap = strings.Split(msg, " ")
 
-						Logger.LogInfo(fmt.Sprintf("Client receive [%s]", msg))
+						AtellaLogger.LogInfo(fmt.Sprintf("Client receive [%s]", msg))
 						switch msgMap[0] {
 						// case "Meow?":
 						case "canTalk":
@@ -117,7 +117,7 @@ func (c *ServerClient) Run() {
 							if err != nil {
 								status = false
 								exit = true
-								Logger.LogError(fmt.Sprintf("%s", err))
+								AtellaLogger.LogError(fmt.Sprintf("%s", err))
 							}
 						case "ackhost":
 							if msgMap[1] == c.conf.Agent.Hostname {
@@ -128,7 +128,7 @@ func (c *ServerClient) Run() {
 							err = c.Send("exit\n")
 							if err != nil {
 								exit = true
-								Logger.LogError(fmt.Sprintf("%s", err))
+								AtellaLogger.LogError(fmt.Sprintf("%s", err))
 							}
 						case "Bye!":
 							exit = true
@@ -139,7 +139,7 @@ func (c *ServerClient) Run() {
 					len(c.neighbours)
 			} else {
 				StopReply = true
-				Logger.LogSystem("Client ready for reload")
+				AtellaLogger.LogSystem("Client ready for reload")
 			}
 		}
 		time.Sleep(2 * time.Second)
@@ -163,27 +163,27 @@ func (client *ServerClient) init(c *AtellaConfig.Config) {
 
 	if len(client.conf.MasterServers.Hosts) < 1 {
 		AtellaConfig.CurrentMasterServerIndex = -1
-		Logger.LogWarning(fmt.Sprintf("Master servers not specifiyed!"))
+		AtellaLogger.LogWarning(fmt.Sprintf("Master servers not specifiyed!"))
 	} else if !client.conf.Agent.Master {
 		masterServerIndex = rand.Int() % len(client.conf.MasterServers.Hosts)
 		AtellaConfig.CurrentMasterServerIndex = 0
-		Logger.LogSystem(fmt.Sprintf("Use [%s] as master server",
+		AtellaLogger.LogSystem(fmt.Sprintf("Use [%s] as master server",
 			client.conf.MasterServers.Hosts[masterServerIndex]))
 	}
 
 	client.GetSector()
-	Logger.LogSystem("Init client side")
+	AtellaLogger.LogSystem("Init client side")
 }
 
 func (client *ServerClient) Reload(c *AtellaConfig.Config) {
-	Logger.LogSystem("Client request reload")
+	AtellaLogger.LogSystem("Client request reload")
 	StopRequest = true
 	for !StopReply {
 	}
 	client.init(c)
 	StopReply = false
 	StopRequest = false
-	Logger.LogSystem("Client reloaded")
+	AtellaLogger.LogSystem("Client reloaded")
 }
 
 // Function find and return sector index
@@ -198,7 +198,7 @@ func (c *ServerClient) GetSector() {
 			hosts := strings.Split(c.conf.Sectors[i].Config.Hosts[j], "|")
 			if elExists(hosts, c.conf.Agent.Hostname) {
 				sector = append(sector, int64(i))
-				Logger.LogInfo(fmt.Sprintf("Sector: %s [%d]",
+				AtellaLogger.LogInfo(fmt.Sprintf("Sector: %s [%d]",
 					c.conf.Sectors[i].Sector, i))
 				for l := 1; int64(l) <= c.conf.Agent.HostCnt; l = l + 1 {
 					hosts_next := strings.Split(c.conf.Sectors[i].Config.Hosts[(j+l)%
@@ -240,7 +240,7 @@ func (c *ServerClient) AddHost(host string, sector string) {
 		} else {
 			AtellaConfig.Vector[index] = vec
 		}
-		Logger.LogInfo(fmt.Sprintf("Added host [%s]", host))
+		AtellaLogger.LogInfo(fmt.Sprintf("Added host [%s]", host))
 	} else {
 		vec = AtellaConfig.Vector[index]
 		if !elExists(vec.Sectors, sector) {
@@ -248,7 +248,8 @@ func (c *ServerClient) AddHost(host string, sector string) {
 				sector)
 		}
 		AtellaConfig.Vector[index] = vec
-		Logger.LogInfo(fmt.Sprintf("Added sector [%s] for host [%s]", sector, host))
+		AtellaLogger.LogInfo(fmt.Sprintf("Added sector [%s] for host [%s]",
+			sector, host))
 	}
 }
 

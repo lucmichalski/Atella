@@ -1,4 +1,4 @@
-package Logger
+package AtellaLogger
 
 import "log"
 

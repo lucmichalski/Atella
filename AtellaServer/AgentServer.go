@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"../AtellaConfig"
-	"../Database"
-	"../Logger"
+	Database "../AtellaDatabase"
+	"../AtellaLogger"
 )
 
 type clientParams struct {
@@ -78,7 +78,8 @@ func (c *ServerClient) Close() error {
 }
 
 func (s *server) OnNewClient(c *ServerClient) {
-	Logger.LogInfo(fmt.Sprintf("New connect [%d], can talk with him - %t", global, c.params.canTalk))
+	AtellaLogger.LogInfo(fmt.Sprintf("New connect [%d], can talk with him - %t",
+		global, c.params.canTalk))
 	// c.Send("Meow?\n")
 	c.params.id = global
 	global = global + 1
@@ -90,7 +91,7 @@ func (s *server) OnNewClient(c *ServerClient) {
 }
 
 func (s *server) OnClientConnectionClosed(c *ServerClient, err error) {
-	Logger.LogInfo(fmt.Sprintf("Client [%d] go away", c.params.id))
+	AtellaLogger.LogInfo(fmt.Sprintf("Client [%d] go away", c.params.id))
 }
 
 func (s *server) OnNewMessage(c *ServerClient, message string) bool {
@@ -116,7 +117,7 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 		c.Send("pong")
 	}
 	if c.params.canTalk == true {
-		Logger.LogInfo(fmt.Sprintf("Server receive [%s]", msg))
+		AtellaLogger.LogInfo(fmt.Sprintf("Server receive [%s]", msg))
 		switch msgMap[0] {
 		case "who":
 			c.Send(fmt.Sprintf("Id: %d\n", c.params.id))
@@ -144,11 +145,13 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 			}
 		}
 	} else if msg == "CodePhrase" {
-		Logger.LogInfo(fmt.Sprintf("Server receive [%s], set canTalk -> true", msg))
+		AtellaLogger.LogInfo(fmt.Sprintf("Server receive [%s], set canTalk -> true",
+			msg))
 		c.Send("canTalk\n")
 		c.params.canTalk = true
 	} else {
-		Logger.LogInfo(fmt.Sprintf("Server receive [%s], can't talk - ignore", msg))
+		AtellaLogger.LogInfo(fmt.Sprintf("Server receive [%s], can't talk - ignore",
+			msg))
 	}
 	return false
 }
@@ -172,7 +175,7 @@ func (s *server) Listen() {
 		listener, err = tls.Listen("tcp", s.address, s.config)
 	}
 	if err != nil {
-		Logger.LogFatal(fmt.Sprintf("Error starting TCP server. %s", err))
+		AtellaLogger.LogFatal(fmt.Sprintf("Error starting TCP server. %s", err))
 	}
 	defer listener.Close()
 
@@ -189,7 +192,8 @@ func (s *server) Listen() {
 
 func New(c *AtellaConfig.Config, address string) *server {
 	conf = c
-	Logger.LogSystem(fmt.Sprintf("Init server side with address %s", address))
+	AtellaLogger.LogSystem(fmt.Sprintf("Init server side with address %s",
+		address))
 	server := &server{
 		address: address,
 		config:  nil}
@@ -198,7 +202,7 @@ func New(c *AtellaConfig.Config, address string) *server {
 
 func (s *server) MasterServer() {
 	if conf.Agent.Master {
-		Logger.LogSystem("I'm master server")
+		AtellaLogger.LogSystem("I'm master server")
 	}
 	AtellaConfig.MasterVector = make(map[string][]AtellaConfig.VectorType, 0)
 	for {
@@ -209,7 +213,8 @@ func (s *server) MasterServer() {
 
 func (c *server) insertVector() error {
 
-	count, _ := Database.SelectQuery(fmt.Sprintf("SELECT * FROM vector WHERE master='%s'",
+	count, _ := Database.SelectQuery(fmt.Sprintf(
+		"SELECT * FROM vector WHERE master='%s'",
 		conf.Agent.Hostname))
 	if count > 0 {
 
@@ -218,7 +223,7 @@ func (c *server) insertVector() error {
 }
 
 // func NewWithTLS(address string, certFile string, keyFile string) *server {
-// 	Logger.LogInfo(fmt.Sprintf("Init tls server side with address %s", address))
+// 	AtellaLogger.LogInfo(fmt.Sprintf("Init tls server side with address %s", address))
 // 	cert, _ := tls.LoadX509KeyPair(certFile, keyFile)
 // 	config := tls.Config{
 // 		Certificates: []tls.Certificate{cert},

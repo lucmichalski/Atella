@@ -1,4 +1,4 @@
-package TgSibnetChannel
+package AtellaTgSibnetChannel
 
 import (
 	"bufio"
@@ -7,17 +7,17 @@ import (
 	"net"
 	"time"
 
-	"../Logger"
+	"../AtellaLogger"
 )
 
 // Config for Sibnet TG bot. Exportable and used in Agent Config
-type TgSibnetConfig struct {
-	Address  string   `json:"address"`
-	Port     int16    `json:"port"`
-	Protocol string   `json:"protocol"`
-	To       []string `json:"to"`
-	Disabled bool     `json:"disabled"`
-	NetTimeout int    
+type AtellaTgSibnetConfig struct {
+	Address    string   `json:"address"`
+	Port       int16    `json:"port"`
+	Protocol   string   `json:"protocol"`
+	To         []string `json:"to"`
+	Disabled   bool     `json:"disabled"`
+	NetTimeout int
 }
 
 // Message format for Sibnet TG bot.
@@ -41,65 +41,65 @@ type tgSibnetConfig struct {
 	to         []string
 	configured bool
 	disabled   bool
-	netTimeout int    
+	netTimeout int
 }
 
 var (
 	// Global config for TG Sibnet Channel.
-	configTgSibnetChannel = newTgSibnetConfig()
+	configAtellaTgSibnetChannel = newAtellaTgSibnetConfig()
 )
 
 // Function initialize TgSibnet Report Channel.
-func TgSibnetInit(c TgSibnetConfig) {
+func AtellaTgSibnetInit(c AtellaTgSibnetConfig) {
 	setTgSibnetHost(c.Address)
 	setTgSibnetPort(c.Port)
 	setTgSibnetTo(c.To)
 	setTgSibnetDisabled(c.Disabled)
 	setTgSibnetTimeout(c.NetTimeout)
-	setTgSibnetConfigured()
-	Logger.LogInfo(fmt.Sprintf("Init TgSibnetBot Channel with params: "+
+	setAtellaTgSibnetConfigured()
+	AtellaLogger.LogInfo(fmt.Sprintf("Init TgSibnetBot Channel with params: "+
 		"[address: %s | port: %d]",
 		c.Address, c.Port))
 }
 
 // Function set nee timeout
 func setTgSibnetTimeout(timeout int) {
-	configTgSibnetChannel.netTimeout = timeout
+	configAtellaTgSibnetChannel.netTimeout = timeout
 }
 
 // Function set channel status.
 func setTgSibnetDisabled(disabled bool) {
-	configTgSibnetChannel.disabled = disabled
+	configAtellaTgSibnetChannel.disabled = disabled
 }
 
 // Function set channel is configured.
-func setTgSibnetConfigured() {
-	configTgSibnetChannel.configured = true
+func setAtellaTgSibnetConfigured() {
+	configAtellaTgSibnetChannel.configured = true
 }
 
 // Function set port for connection.
 func setTgSibnetPort(port int16) {
 	if port != 0 {
-		configTgSibnetChannel.port = port
+		configAtellaTgSibnetChannel.port = port
 	}
 }
 
 // Function set endpoints for messages.
 func setTgSibnetTo(to []string) {
 	if to != nil {
-		configTgSibnetChannel.to = to
+		configAtellaTgSibnetChannel.to = to
 	}
 }
 
 // Function set ip-address(host) for connection.
 func setTgSibnetHost(host string) {
 	if host != "" {
-		configTgSibnetChannel.host = host
+		configAtellaTgSibnetChannel.host = host
 	}
 }
 
 // Function create configuration for TgSibnet Channel.
-func newTgSibnetConfig() *tgSibnetConfig {
+func newAtellaTgSibnetConfig() *tgSibnetConfig {
 	local := new(tgSibnetConfig)
 	local.host = "localhost"
 	local.port = 1
@@ -120,22 +120,22 @@ func newTgSibnetMessage() *tgSibnetMessage {
 
 // Function initialize send message (text) via TgSibnet Channel to users,
 // specifying in to array in config. It is exportable function
-func TgSibnetSendPersonalMessage(text string, hostname string) (bool,
+func AtellaTgSibnetSendPersonalMessage(text string, hostname string) (bool,
 	error) {
-	if configTgSibnetChannel.disabled {
+	if configAtellaTgSibnetChannel.disabled {
 		return false, nil
 	}
-	if !configTgSibnetChannel.configured {
+	if !configAtellaTgSibnetChannel.configured {
 		return false, fmt.Errorf("SibnetBot is not conigured!")
 	}
-	if configTgSibnetChannel.to == nil {
+	if configAtellaTgSibnetChannel.to == nil {
 		return false, fmt.Errorf("SibnetBot users list are empty")
 	}
 	msg := newTgSibnetMessage()
 	msg.Text = fmt.Sprintf("[%s]: %s", hostname, text)
-	msg.Usernames = configTgSibnetChannel.to
+	msg.Usernames = configAtellaTgSibnetChannel.to
 	result, err := sendMessage(*msg)
-	Logger.LogInfo(fmt.Sprintf("Bot reply %s\n", result))
+	AtellaLogger.LogInfo(fmt.Sprintf("Bot reply %s\n", result))
 	if err != nil {
 		return false, fmt.Errorf("%s", err)
 	}
@@ -150,9 +150,9 @@ func TgSibnetSendPersonalMessage(text string, hostname string) (bool,
 // to array in config. It is not exportable function
 func sendMessage(msg tgSibnetMessage) (string, error) {
 	conn, err := net.DialTimeout("tcp",
-		fmt.Sprintf("%s:%d", configTgSibnetChannel.host,
-			configTgSibnetChannel.port),
-			time.Duration(configTgSibnetChannel.netTimeout)*time.Second)
+		fmt.Sprintf("%s:%d", configAtellaTgSibnetChannel.host,
+			configAtellaTgSibnetChannel.port),
+		time.Duration(configAtellaTgSibnetChannel.netTimeout)*time.Second)
 	if err != nil {
 		return "", fmt.Errorf("%s", err)
 	}
@@ -160,7 +160,7 @@ func sendMessage(msg tgSibnetMessage) (string, error) {
 	pack := tgSibnetPacket{"sendMessage", msg}
 	msg_json, _ := json.Marshal(pack)
 
-	Logger.LogInfo(fmt.Sprintf("Send to bot %s\n", string(msg_json)))
+	AtellaLogger.LogInfo(fmt.Sprintf("Send to bot %s\n", string(msg_json)))
 	_, err = conn.Write(msg_json)
 	if err != nil {
 		return "", fmt.Errorf("%s", err)
