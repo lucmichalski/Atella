@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"../AtellaConfig"
-	Database "../AtellaDatabase"
+	"../AtellaDatabase"
 	"../AtellaLogger"
 )
 
@@ -213,7 +213,7 @@ func (s *server) MasterServer() {
 
 func (c *server) insertVector() error {
 
-	count, _ := Database.SelectQuery(fmt.Sprintf(
+	count, _ := AtellaDatabase.SelectQuery(fmt.Sprintf(
 		"SELECT * FROM vector WHERE master='%s'",
 		conf.Agent.Hostname))
 	if count > 0 {

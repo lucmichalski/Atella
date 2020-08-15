@@ -50,7 +50,7 @@ func handle(c chan os.Signal) {
 			conf.Init()
 			conf.PrintJsonConfig()
 			client.Reload(conf)
-			Database.Reload(conf)
+			AtellaDatabase.Reload(conf)
 			AtellaLogger.LogSystem("Reloaded")
 		case "interrupt":
 			os.Exit(0)
@@ -163,8 +163,8 @@ func main() {
 	}
 
 	conf.SavePid()
-	Database.Init(conf)
-	Database.Connect()
+	AtellaDatabase.Init(conf)
+	AtellaDatabase.Connect()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP)
 	signal.Notify(c, syscall.SIGINT)

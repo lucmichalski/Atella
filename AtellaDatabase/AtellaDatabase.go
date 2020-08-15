@@ -1,4 +1,4 @@
-package Database
+package AtellaDatabase
 
 import (
 	"database/sql"
