@@ -13,8 +13,8 @@ import (
 	"../../AtellaClient"
 	"../../AtellaConfig"
 	"../../AtellaServer"
-	"../../Database"
-	"../../Logger"
+	"../../AtellaDatabase"
+	"../../AtellaLogger"
 )
 
 var (
@@ -40,18 +40,18 @@ var (
 func handle(c chan os.Signal) {
 	for {
 		sig := <-c
-		Logger.LogSystem(fmt.Sprintf("Receive %s [%s]", sig, sig.String()))
+		AtellaLogger.LogSystem(fmt.Sprintf("Receive %s [%s]", sig, sig.String()))
 		switch sig.String() {
 		case "hangup":
 			err := conf.LoadConfig(configFilePath)
 			if err != nil {
-				Logger.LogFatal(fmt.Sprintf("%s", err))
+				AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
 			}
 			conf.Init()
 			conf.PrintJsonConfig()
 			client.Reload(conf)
 			Database.Reload(conf)
-			Logger.LogSystem("Reloaded")
+			AtellaLogger.LogSystem("Reloaded")
 		case "interrupt":
 			os.Exit(0)
 		case "user defined signal 1":
@@ -113,7 +113,7 @@ func initFlags() {
 		conf := AtellaConfig.NewConfig()
 		err := conf.LoadConfig(configFilePath)
 		if err != nil {
-			Logger.LogFatal(fmt.Sprintf("%s", err))
+			AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
 		}
 		fmt.Println(conf.Agent.PidFile)
 		os.Exit(0)
@@ -133,11 +133,11 @@ func main() {
 	conf = AtellaConfig.NewConfig()
 	err = conf.LoadConfig(configFilePath)
 	if err != nil {
-		Logger.LogFatal(fmt.Sprintf("%s", err))
+		AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
 	}
 	err = conf.LoadDirectory(configDirPath)
 	if err != nil {
-		Logger.LogFatal(fmt.Sprintf("%s", err))
+		AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
 	}
 	conf.Init()
 	conf.PrintJsonConfig()
@@ -172,7 +172,7 @@ func main() {
 	signal.Notify(c, syscall.SIGUSR2)
 
 	go handle(c)
-	Logger.LogSystem(fmt.Sprintf("Started Atella v%s", AtellaConfig.Version))
+	AtellaLogger.LogSystem(fmt.Sprintf("Started Atella v%s", AtellaConfig.Version))
 	server := AtellaServer.New(conf, "0.0.0.0:5223")
 	go server.Listen()
 	go server.MasterServer()
