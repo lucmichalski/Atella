@@ -83,6 +83,7 @@ func initFlags() {
 			"Distributed\n\t"+
 			"Send\n\t"+
 			"Reload\n\t"+
+			"Rotate\n\t"+
 			"Report\n")
 	flag.StringVar(&reportMessage, "report-message", "Test",
 		"Message. Work only with run mode \"Report\" & report type \"Custom\"")
