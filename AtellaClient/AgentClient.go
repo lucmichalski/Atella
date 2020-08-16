@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"strings"
@@ -72,8 +73,9 @@ func (c *ServerClient) Run() {
 				}
 			}
 			if !StopRequest {
-				c.conn, err = net.Dial("tcp", fmt.Sprintf("%s:5223",
-					currentNeighboursAddr))
+				c.conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s:5223",
+					currentNeighboursAddr),
+					time.Duration(c.conf.Agent.NetTimeout)*time.Second)
 				vectorIndex := getVectorIndexByHost(currentNeighboursAddr)
 				vec.Host = currentNeighboursAddr
 				if err != nil {
@@ -93,7 +95,9 @@ func (c *ServerClient) Run() {
 						if err != nil {
 							status = false
 							exit = true
-							AtellaLogger.LogError(fmt.Sprintf("%s", err))
+							if err != io.EOF {
+								AtellaLogger.LogError(fmt.Sprintf("%s", err))
+							}
 						}
 						if exit {
 							c.Close()
@@ -195,16 +199,16 @@ func (c *ServerClient) GetSector() {
 	for i := 0; i < sectorsCnt; i = i + 1 {
 		hostsCnt := len(c.conf.Sectors[i].Config.Hosts)
 		for j := 0; j < hostsCnt; j = j + 1 {
-			hosts := strings.Split(c.conf.Sectors[i].Config.Hosts[j], "|")
+			hosts := strings.Split(c.conf.Sectors[i].Config.Hosts[j], " ")
 			if elExists(hosts, c.conf.Agent.Hostname) {
 				sector = append(sector, int64(i))
 				AtellaLogger.LogInfo(fmt.Sprintf("Sector: %s [%d]",
 					c.conf.Sectors[i].Sector, i))
 				for l := 1; int64(l) <= c.conf.Agent.HostCnt; l = l + 1 {
 					hosts_next := strings.Split(c.conf.Sectors[i].Config.Hosts[(j+l)%
-						hostsCnt], "|")
+						hostsCnt], " ")
 					hosts_prev := strings.Split(
-						c.conf.Sectors[i].Config.Hosts[(j-l+hostsCnt)%hostsCnt], "|")
+						c.conf.Sectors[i].Config.Hosts[(j-l+hostsCnt)%hostsCnt], " ")
 					if !elExists(hosts_next, c.conf.Agent.Hostname) {
 						c.AddHost(hosts_next[0], c.conf.Sectors[i].Sector)
 						c.AddHost(hosts_prev[0], c.conf.Sectors[i].Sector)
