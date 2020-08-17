@@ -84,7 +84,7 @@ func (c *ServerClient) Run() {
 				} else {
 					exit = false
 					connbuf := bufio.NewReader(c.conn)
-					err = c.Send("CodePhrase\n")
+					err = c.Send(fmt.Sprintf("%s\n", c.conf.Security.Code))
 					if err != nil {
 						status = false
 						exit = true

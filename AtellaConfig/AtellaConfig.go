@@ -62,6 +62,10 @@ type AtellaConfig struct {
 	NetTimeout   int    `json:"net_timeout"`
 }
 
+type SecurityConfig struct {
+	Code string `json:"code"`
+}
+
 type DatabaseConfig struct {
 	Type     string `json:"type"`
 	Host     string `json:"host"`
@@ -86,6 +90,7 @@ type SectorConfig struct {
 
 type Config struct {
 	Agent         *AtellaConfig              `json:"AgentSection"`
+	Security      *SecurityConfig            `json:"SecuritySection"`
 	Channels      map[string]*ChannelsConfig `json:"ChannelsSection"`
 	Sectors       []*SectorsConfig           `json:"SectorsSection"`
 	DB            *DatabaseConfig            `json:"DatabaseSection"`
@@ -107,6 +112,8 @@ func NewConfig() *Config {
 			Master:       false,
 			Interval:     10,
 			NetTimeout:   2},
+		Security: &SecurityConfig{
+			Code: "CodePhrase"},
 		DB: &DatabaseConfig{},
 		MasterServers: &MasterServersConfig{
 			Hosts: make([]string, 0)},
@@ -381,6 +388,17 @@ func (c *Config) LoadConfig(path string) error {
 		}
 	}
 
+	// Parse security table
+	if val, ok := tbl.Fields["security"]; ok {
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			return fmt.Errorf("%s: invalid configuration", path)
+		}
+		if err = toml.UnmarshalTable(subTable, c.Security); err != nil {
+			return fmt.Errorf("Error parsing %s, %s", path, err)
+		}
+	}
+
 	// Parse database table
 	if val, ok := tbl.Fields["database"]; ok {
 		subTable, ok := val.(*ast.Table)
@@ -435,7 +453,7 @@ func (c *Config) LoadConfig(path string) error {
 						pluginName)
 				}
 			}
-		case "agent", "database", "master_servers":
+		case "agent", "security", "database", "master_servers":
 		default:
 			return fmt.Errorf("Error parsing %s, %s", name, err)
 		}

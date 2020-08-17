@@ -144,7 +144,7 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 				}
 			}
 		}
-	} else if msg == "CodePhrase" {
+	} else if msg == conf.Security.Code {
 		AtellaLogger.LogInfo(fmt.Sprintf("Server receive [%s], set canTalk -> true",
 			msg))
 		c.Send("canTalk\n")
