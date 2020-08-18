@@ -6,34 +6,28 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
 	"../../AtellaClient"
 	"../../AtellaConfig"
-	"../../AtellaServer"
 	"../../AtellaDatabase"
 	"../../AtellaLogger"
+	"../../AtellaServer"
 )
 
 var (
-	conf             *AtellaConfig.Config       = nil
-	runMode          string                     = "Distributed"
-	reportMessage    string                     = "Test"
-	reportType       string                     = "Test"
-	configFilePath   string                     = ""
-	configDirPath    string                     = ""
-	target           string                     = "all"
-	client           *AtellaClient.ServerClient = nil
-	printVersion     bool                       = false
-	printPidFilePath bool                       = false
-	GitCommit        string                     = "unknown"
-	GoVersion        string                     = "unknown"
-	Version          string                     = "unknown"
-	Service          string                     = "Atella"
-	Arch             string                     = "unknown"
-	Sys              string                     = "unknown"
+	conf           *AtellaConfig.Config       = nil
+	configFilePath string                     = ""
+	configDirPath  string                     = ""
+	client         *AtellaClient.ServerClient = nil
+	printVersion   bool                       = false
+	GitCommit      string                     = "unknown"
+	GoVersion      string                     = "unknown"
+	Version        string                     = "unknown"
+	Service        string                     = "Atella"
+	Arch           string                     = "unknown"
+	Sys            string                     = "unknown"
 )
 
 // Interrupts handler
@@ -78,28 +72,7 @@ func initFlags() {
 		"Path to config")
 	flag.StringVar(&configDirPath, "config-directory", "",
 		"Path to config directory")
-	flag.StringVar(&runMode, "run-mode", "Distributed",
-		"Run mode. Possible values:\n\t"+
-			"Distributed\n\t"+
-			"Send\n\t"+
-			"Reload\n\t"+
-			"Rotate\n\t"+
-			"Report\n")
-	flag.StringVar(&reportMessage, "report-message", "Test",
-		"Message. Work only with run mode \"Report\" & report type \"Custom\"")
-	flag.StringVar(&reportType, "report-type", "Test",
-		"Report type. Possible values:\n\t"+
-			"Reboot\n\t"+
-			"Custom\n")
-	flag.StringVar(&target, "report-target", "all",
-		"Report target. Possible values:\n\t"+
-			"All\n\t"+
-			"Tgsibnet\n\t"+
-			"Mail\n\t"+
-			"Graphite\n")
 	flag.BoolVar(&printVersion, "version", false, "Print version and exit")
-	flag.BoolVar(&printPidFilePath, "print-pid-file-path", false,
-		"Print pid file path and exit")
 	flag.Parse()
 
 	if printVersion {
@@ -109,14 +82,6 @@ func initFlags() {
 		fmt.Println("Packet Sys:", Sys)
 		fmt.Println("Git Commit:", GitCommit)
 		fmt.Println("Go Version:", GoVersion)
-		os.Exit(0)
-	} else if printPidFilePath {
-		conf := AtellaConfig.NewConfig()
-		err := conf.LoadConfig(configFilePath)
-		if err != nil {
-			AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
-		}
-		fmt.Println(conf.Agent.PidFile)
 		os.Exit(0)
 	}
 
@@ -143,26 +108,6 @@ func main() {
 	conf.Init()
 	conf.PrintJsonConfig()
 
-	if strings.ToLower(runMode) == "report" {
-		if strings.ToLower(reportType) == "reboot" {
-			reportMessage = fmt.Sprintf("Host has been power-on at [%s]", time.Now())
-		}
-		conf.Report(reportMessage, target)
-		os.Exit(0)
-	} else if strings.ToLower(runMode) == "send" {
-		pid := conf.GetPid()
-		if pid > 0 {
-			syscall.Kill(pid, syscall.SIGUSR2)
-		}
-		os.Exit(0)
-	} else if strings.ToLower(runMode) == "reload" {
-		pid := conf.GetPid()
-		if pid > 0 {
-			syscall.Kill(pid, syscall.SIGHUP)
-		}
-		os.Exit(0)
-	}
-
 	conf.SavePid()
 	AtellaDatabase.Init(conf)
 	AtellaDatabase.Connect()
@@ -173,7 +118,8 @@ func main() {
 	signal.Notify(c, syscall.SIGUSR2)
 
 	go handle(c)
-	AtellaLogger.LogSystem(fmt.Sprintf("Started Atella v%s", AtellaConfig.Version))
+	AtellaLogger.LogSystem(fmt.Sprintf("Started %s version %s",
+		AtellaConfig.Service, AtellaConfig.Version))
 	server := AtellaServer.New(conf, "0.0.0.0:5223")
 	go server.Listen()
 	go server.MasterServer()
@@ -186,5 +132,4 @@ func main() {
 	for {
 		time.Sleep(time.Minute)
 	}
-	//	os.Exit(0)
 }

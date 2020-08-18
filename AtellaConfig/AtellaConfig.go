@@ -458,6 +458,11 @@ func (c *Config) LoadConfig(path string) error {
 			return fmt.Errorf("Error parsing %s, %s", name, err)
 		}
 	}
+
+	_, err = os.Stat(c.Agent.MessagePath)
+	if os.IsNotExist(err) {
+		os.MkdirAll(c.Agent.MessagePath, os.ModePerm)
+	}
 	return nil
 }
 

@@ -67,10 +67,6 @@ func (conf *Config) Init() {
 				conf.Channels[i].Channel))
 		}
 	}
-	_, err := os.Stat(conf.Agent.MessagePath)
-	if os.IsNotExist(err) {
-		os.MkdirAll(conf.Agent.MessagePath, os.ModePerm)
-	}
 }
 
 func (conf *Config) Sender() {

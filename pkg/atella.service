@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 ExecStart=/usr/bin/atella
-ExecReload=/usr/bin/atella -r reload
+ExecReload=/usr/bin/atella-cli -cmd reload
 User=atella
 Group=atella
 Restart=always

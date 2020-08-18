@@ -5,7 +5,7 @@
   notifempty
   delaycompress
   postrotate
-    /usr/bin/atella -run-mode rotate
+    /usr/bin/atella-cli -cmd rotate
   endscript
 }
 
