@@ -49,7 +49,8 @@ tar-deb:
 	mkdir -p build/root/${SERVICE}/usr/bin 
 	mkdir -p build/root/${SERVICE}/etc/
 	mkdir -p build/root/${SERVICE}/usr/lib/atella/scripts
-	$(if ifeq ${ARCH} amd64, @cp build/${SERVICE}_${OS}_${ARCH} build/root/${SERVICE}/usr/bin/${SERVICE})
+	cp build/${SERVICE}_${OS}_${ARCH} build/root/${SERVICE}/usr/bin/${SERVICE}; \
+	cp build/${SERVICE}-cli_${OS}_${ARCH} build/root/${SERVICE}/usr/bin/${SERVICE}-cli;  
 	cp -r etc/ build/root/${SERVICE}/etc/${SERVICE}
 	cp pkg/atella.service build/root/${SERVICE}/usr/lib/atella/scripts/
 	cp pkg/init.sh build/root/${SERVICE}/usr/lib/atella/scripts/
