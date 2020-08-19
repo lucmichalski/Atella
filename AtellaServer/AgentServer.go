@@ -127,7 +127,7 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 				c.Send(fmt.Sprintf("ackhost %s\n", c.params.currentClientHostname))
 			}
 		case "hostname":
-			c.Send(fmt.Sprintf("%s\n", conf.Agent.Hostname))
+			c.Send(fmt.Sprintf("ackhostname %s\n", conf.Agent.Hostname))
 		case "version":
 			c.Send(fmt.Sprintf("%s\n", AtellaConfig.Version))
 		case "help":

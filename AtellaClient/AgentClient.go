@@ -49,14 +49,16 @@ func (c *ServerClient) Close() error {
 // Run client
 func (c *ServerClient) Run() {
 	var (
-		err                   error    = nil
-		exit                  bool     = false
-		msg                   string   = ""
-		msgMap                []string = []string{}
-		status                bool     = false
-		currentNeighboursInd  int      = 0
-		currentNeighboursAddr string   = ""
-		vec                   AtellaConfig.VectorType
+		err                    error    = nil
+		exit                   bool     = false
+		msg                    string   = ""
+		msgMap                 []string = []string{}
+		status                 bool     = false
+		currentNeighboursInd   int      = 0
+		currentNeighboursAddr  string   = ""
+		currentNeighboursAddrs []string = []string{}
+		hostname               string   = ""
+		vec                    AtellaConfig.VectorType
 	)
 
 	for {
@@ -64,87 +66,111 @@ func (c *ServerClient) Run() {
 			AtellaLogger.LogInfo("No neighbours")
 			StopReply = true
 		} else {
-			currentNeighboursAddr = c.neighbours[currentNeighboursInd]
-			if currentNeighboursInd == 0 {
-				err = c.SendToMaster(fmt.Sprintf("set %s %s\n", c.conf.Agent.Hostname,
-					AtellaConfig.GetJsonVector()))
-				if err != nil {
-					AtellaLogger.LogError(fmt.Sprintf("%s", err))
-				}
-			}
-			if !StopRequest {
-				c.conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s:5223",
-					currentNeighboursAddr),
-					time.Duration(c.conf.Agent.NetTimeout)*time.Second)
-				vectorIndex := getVectorIndexByHost(currentNeighboursAddr)
-				vec.Host = currentNeighboursAddr
-				if err != nil {
-					AtellaLogger.LogWarning(fmt.Sprintf("%s", err))
-					vec.Status = false
-				} else {
-					exit = false
-					connbuf := bufio.NewReader(c.conn)
-					err = c.Send(fmt.Sprintf("%s\n", c.conf.Security.Code))
+			currentNeighboursAddrs = strings.Split(c.neighbours[currentNeighboursInd],
+				",")
+			for _, currentNeighboursAddr = range currentNeighboursAddrs {
+				if currentNeighboursInd == 0 {
+					err = c.SendToMaster(fmt.Sprintf("set %s %s\n", c.conf.Agent.Hostname,
+						AtellaConfig.GetJsonVector()))
 					if err != nil {
-						status = false
-						exit = true
 						AtellaLogger.LogError(fmt.Sprintf("%s", err))
 					}
-					for {
-						message, err := connbuf.ReadString('\n')
+				}
+				if !StopRequest {
+					c.conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s:5223",
+						currentNeighboursAddr),
+						time.Duration(c.conf.Agent.NetTimeout)*time.Second)
+					vectorIndex := getVectorIndexByHost(currentNeighboursAddr)
+					if vectorIndex >= 0 {
+						vec = AtellaConfig.Vector[vectorIndex]
+					} else {
+						vec = AtellaConfig.VectorType{}
+						vec.Host = currentNeighboursAddr
+						vec.Status = false
+					}
+					if err != nil {
+						AtellaLogger.LogWarning(fmt.Sprintf("%s", err))
+						vec.Status = false
+					} else {
+						exit = false
+						connbuf := bufio.NewReader(c.conn)
+						err = c.Send(fmt.Sprintf("%s\n", c.conf.Security.Code))
 						if err != nil {
 							status = false
 							exit = true
-							if err != io.EOF {
-								AtellaLogger.LogError(fmt.Sprintf("%s", err))
-							}
+							AtellaLogger.LogError(fmt.Sprintf("%s", err))
 						}
-						if exit {
-							c.Close()
-							vec.Status = status
-							if vectorIndex < 0 {
-								AtellaConfig.Vector = append(AtellaConfig.Vector, vec)
-							} else {
-								AtellaConfig.Vector[vectorIndex] = vec
-							}
-							break
-						}
-
-						msg = strings.TrimRight(message, "\r\n")
-						msgMap = strings.Split(msg, " ")
-
-						AtellaLogger.LogInfo(fmt.Sprintf("Client receive [%s]", msg))
-						switch msgMap[0] {
-						// case "Meow?":
-						case "canTalk":
-							err = c.Send(fmt.Sprintf("host %s\n", c.conf.Agent.Hostname))
+						for {
+							message, err := connbuf.ReadString('\n')
 							if err != nil {
 								status = false
 								exit = true
-								AtellaLogger.LogError(fmt.Sprintf("%s", err))
+								if err != io.EOF {
+									AtellaLogger.LogError(fmt.Sprintf("%s", err))
+								}
 							}
-						case "ackhost":
-							if msgMap[1] == c.conf.Agent.Hostname {
-								status = true
-							} else {
-								status = false
+							if exit {
+								c.Close()
+								vec.Status = status
+								vec.Hostname = hostname
+								if vectorIndex < 0 {
+									AtellaConfig.Vector = append(AtellaConfig.Vector, vec)
+								} else {
+									AtellaConfig.Vector[vectorIndex] = vec
+								}
+								break
 							}
-							err = c.Send("exit\n")
-							if err != nil {
+
+							msg = strings.TrimRight(message, "\r\n")
+							msgMap = strings.Split(msg, " ")
+
+							AtellaLogger.LogInfo(fmt.Sprintf("Client receive [%s]", msg))
+							switch msgMap[0] {
+							case "canTalk":
+								err = c.Send("hostname\n")
+								if err != nil {
+									status = false
+									exit = true
+									AtellaLogger.LogError(fmt.Sprintf("%s", err))
+								}
+							case "ackhostname":
+								if len(msgMap) < 2 {
+									exit = true
+								} else {
+									hostname = msgMap[1]
+									err = c.Send(fmt.Sprintf("host %s\n", c.conf.Agent.Hostname))
+									if err != nil {
+										exit = true
+										AtellaLogger.LogError(fmt.Sprintf("%s", err))
+									}
+								}
+							case "ackhost":
+								if len(msgMap) < 2 {
+									exit = true
+								} else {
+									if msgMap[1] == c.conf.Agent.Hostname {
+										status = true
+									} else {
+										status = false
+									}
+									err = c.Send("exit\n")
+									if err != nil {
+										exit = true
+										AtellaLogger.LogError(fmt.Sprintf("%s", err))
+									}
+								}
+							case "Bye!":
 								exit = true
-								AtellaLogger.LogError(fmt.Sprintf("%s", err))
 							}
-						case "Bye!":
-							exit = true
 						}
 					}
+				} else {
+					StopReply = true
+					AtellaLogger.LogSystem("Client ready for reload")
 				}
-				currentNeighboursInd = (currentNeighboursInd + 1) %
-					len(c.neighbours)
-			} else {
-				StopReply = true
-				AtellaLogger.LogSystem("Client ready for reload")
 			}
+			currentNeighboursInd = (currentNeighboursInd + 1) %
+				len(c.neighbours)
 		}
 		time.Sleep(2 * time.Second)
 	}
@@ -223,37 +249,41 @@ func (c *ServerClient) GetSector() {
 // Function add non-existing host in vector and neighbours array
 func (c *ServerClient) AddHost(host string, sector string) {
 	var vec AtellaConfig.VectorType
-	index := getVectorIndexByHost(host)
-	if !elExists(c.neighbours, host) {
-		c.neighbours = append(c.neighbours, host)
-		if index < 0 {
-			vec = AtellaConfig.VectorType{
-				Host:    host,
-				Status:  false,
-				Sectors: make([]string, 0)}
+	hosts := strings.Split(host, ",")
+	for _, h := range hosts {
+		index := getVectorIndexByHost(h)
+		if !elExists(c.neighbours, h) {
+			c.neighbours = append(c.neighbours, h)
+			if index < 0 {
+				vec = AtellaConfig.VectorType{
+					Host:     h,
+					Hostname: "unknown",
+					Status:   false,
+					Sectors:  make([]string, 0)}
+			} else {
+				vec = AtellaConfig.Vector[index]
+			}
+			if !elExists(vec.Sectors, sector) {
+				vec.Sectors = append(vec.Sectors,
+					sector)
+			}
+			if index < 0 {
+				AtellaConfig.Vector = append(AtellaConfig.Vector, vec)
+			} else {
+				AtellaConfig.Vector[index] = vec
+			}
+			AtellaLogger.LogInfo(fmt.Sprintf("Added host [%s]",
+				h))
 		} else {
 			vec = AtellaConfig.Vector[index]
-		}
-		if !elExists(vec.Sectors, sector) {
-			vec.Sectors = append(vec.Sectors,
-				sector)
-		}
-
-		if index < 0 {
-			AtellaConfig.Vector = append(AtellaConfig.Vector, vec)
-		} else {
+			if !elExists(vec.Sectors, sector) {
+				vec.Sectors = append(vec.Sectors,
+					sector)
+			}
 			AtellaConfig.Vector[index] = vec
+			AtellaLogger.LogInfo(fmt.Sprintf("Added sector [%s] for host [%s]",
+				sector, h))
 		}
-		AtellaLogger.LogInfo(fmt.Sprintf("Added host [%s]", host))
-	} else {
-		vec = AtellaConfig.Vector[index]
-		if !elExists(vec.Sectors, sector) {
-			vec.Sectors = append(vec.Sectors,
-				sector)
-		}
-		AtellaConfig.Vector[index] = vec
-		AtellaLogger.LogInfo(fmt.Sprintf("Added sector [%s] for host [%s]",
-			sector, host))
 	}
 }
 

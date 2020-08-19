@@ -22,6 +22,7 @@ import (
 
 type VectorType struct {
 	Host    string   `json:"host"`
+	Hostname    string   `json:"hostname"`
 	Status  bool     `json:"status"`
 	Sectors []string `json:"sectors"`
 }
