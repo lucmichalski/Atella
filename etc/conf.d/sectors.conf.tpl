@@ -1,2 +1,2 @@
 # [sectors.sector1]
-#   hosts = ["hostname"]
+#   hosts = ["ip hostname"]

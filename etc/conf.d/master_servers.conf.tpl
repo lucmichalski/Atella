@@ -1,2 +1,2 @@
-[master_servers]
-  hosts = ["ip"]
+# [master_servers]
+#   hosts = ["ip hostname"]
