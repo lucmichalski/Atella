@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -132,6 +133,19 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 			c.Send(fmt.Sprintf("%s\n", AtellaConfig.Version))
 		case "help":
 			c.help()
+		case "update":
+			if len(msgMap) > 2 {
+				version := msgMap[1]
+				if version != AtellaConfig.Version {
+					AtellaLogger.LogSystem(fmt.Sprintf("Initiate install %s",
+						version))
+					cmd := exec.Command("/usr/bin/atella-cli", "-update", version)
+					err := cmd.Run()
+					if err != nil {
+						AtellaLogger.LogError("Failed exec cli for update")
+					}
+				}
+			}
 		case "set":
 			if len(msgMap) > 2 {
 				c.params.currentClientHostname = msgMap[1]

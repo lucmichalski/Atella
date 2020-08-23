@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 	"syscall"
@@ -29,6 +30,9 @@ var (
 	Service        string               = "Atella-Cli"
 	Arch           string               = "unknown"
 	Sys            string               = "unknown"
+	BinPrefix      string               = "/usr/bin"
+	updateVersion  string               = "unknown"
+	pkgTemplate    string               = "atella_%s-1_%s.%s"
 )
 
 // Function initialize application runtime flags.
@@ -44,6 +48,7 @@ func initFlags() {
 			"Send\n\t"+
 			"Reload\n\t"+
 			"Rotate\n\t"+
+			"Update\n\t"+
 			"Report")
 	flag.StringVar(&msg, "message", "Test",
 		"Message. Work only with run mode \"Report\" & report type \"Custom\"")
@@ -60,6 +65,8 @@ func initFlags() {
 	flag.BoolVar(&printVersion, "version", false, "Print version and exit")
 	flag.BoolVar(&printPidFile, "print-pidfile", false,
 		"Print pid file path and exit")
+	flag.StringVar(&updateVersion, "to-version", "",
+		"Version for update")
 	flag.Parse()
 
 	AtellaLogger.LogSystem(fmt.Sprintf("Started %s version %s",
@@ -120,6 +127,21 @@ func Command() {
 			syscall.Kill(pid, syscall.SIGHUP)
 		}
 		os.Exit(0)
+	case "update":
+		// TODO: Create environment for master servers from atella config
+		if updateVersion != "" {
+			cmd := exec.Command(fmt.Sprintf("%s/atella-updater.sh",
+				BinPrefix), "master.atella.local",
+				fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys)
+			err := cmd.Run()
+			if err != nil {
+				AtellaLogger.LogError("Failed exec cli for update")
+				AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+			}
+		} else {
+
+			AtellaLogger.LogError("Version not specifyed")
+		}
 	case "rotate":
 	default:
 		AtellaLogger.LogError(fmt.Sprintf("Unknown command: %s", cmd))

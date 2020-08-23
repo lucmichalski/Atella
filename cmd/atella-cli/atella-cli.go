@@ -11,6 +11,7 @@ var (
 	Service   string = "Atella-Cli"
 	Arch      string = "unknown"
 	Sys       string = "unknown"
+	BinPrefix string = "/usr/bin"
 )
 
 func main() {
@@ -20,5 +21,6 @@ func main() {
 	AtellaCli.Sys = Sys
 	AtellaCli.Arch = Arch
 	AtellaCli.Version = Version
+	AtellaCli.BinPrefix = BinPrefix
 	AtellaCli.Command()
 }

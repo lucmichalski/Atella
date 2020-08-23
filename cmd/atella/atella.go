@@ -28,6 +28,7 @@ var (
 	Service        string                     = "Atella"
 	Arch           string                     = "unknown"
 	Sys            string                     = "unknown"
+	BinPrefix      string                     = "/usr/bin"
 )
 
 // Interrupts handler

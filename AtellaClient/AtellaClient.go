@@ -103,7 +103,7 @@ func (c *ServerClient) Run() {
 						for {
 							message, err := connbuf.ReadString('\n')
 							if err != nil {
-                                                                if err != io.EOF {
+								if err != io.EOF {
 									status = false
 									exit = true
 									AtellaLogger.LogError(fmt.Sprintf("%s", err))
