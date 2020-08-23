@@ -50,9 +50,9 @@ tar-deb:
 	mkdir -p build/root/${SERVICE}${BINPREFIX} 
 	mkdir -p build/root/${SERVICE}/etc/
 	mkdir -p build/root/${SERVICE}/usr/lib/atella/scripts
-	cp build/${SERVICE}_${OS}_${ARCH} build/root/${SERVICE}{BINPREFIX}/${SERVICE}; \
-	cp build/${SERVICE}-cli_${OS}_${ARCH} build/root/${SERVICE}{BINPREFIX}/${SERVICE}-cli;  
-	cp build/${SERVICE}-updater.sh build/root/${SERVICE}{BINPREFIX}/${SERVICE}-updater.sh;  
+	cp build/${SERVICE}_${OS}_${ARCH} build/root/${SERVICE}${BINPREFIX}/${SERVICE}; \
+	cp build/${SERVICE}-cli_${OS}_${ARCH} build/root/${SERVICE}${BINPREFIX}/${SERVICE}-cli;  
+	cp pkg/${SERVICE}-updater.sh build/root/${SERVICE}${BINPREFIX}/${SERVICE}-updater.sh;  
 	cp -r etc/ build/root/${SERVICE}/etc/${SERVICE}
 	cp pkg/atella.service build/root/${SERVICE}/usr/lib/atella/scripts/
 	cp pkg/init.sh build/root/${SERVICE}/usr/lib/atella/scripts/
