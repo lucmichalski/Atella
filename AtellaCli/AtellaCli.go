@@ -139,7 +139,6 @@ func Command() {
 				AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
 			}
 		} else {
-
 			AtellaLogger.LogError("Version not specifyed")
 		}
 	case "rotate":

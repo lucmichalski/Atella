@@ -139,7 +139,9 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 				if version != AtellaConfig.Version {
 					AtellaLogger.LogSystem(fmt.Sprintf("Initiate install %s",
 						version))
-					cmd := exec.Command("/usr/bin/atella-cli", "-update", version)
+					cmd := exec.Command(fmt.Sprintf("%s/atella-cli",
+						AtellaConfig.BinPrefix),
+						"-cmd", "update", "-to-version", version)
 					err := cmd.Run()
 					if err != nil {
 						AtellaLogger.LogError("Failed exec cli for update")

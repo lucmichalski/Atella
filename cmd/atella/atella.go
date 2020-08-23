@@ -92,6 +92,7 @@ func initFlags() {
 	AtellaConfig.Service = Service
 	AtellaConfig.Arch = Arch
 	AtellaConfig.Sys = Sys
+	AtellaConfig.BinPrefix = BinPrefix
 }
 
 func main() {
