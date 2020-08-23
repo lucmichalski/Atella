@@ -13,7 +13,7 @@ URL := "https://github.com/JIexa24/Atella"
 ARCH := amd64
 OS := linux
 SYS := deb
-BINPREFIX := "/usr/bin"
+BINPREFIX := /usr/bin
 
 GIT_BRANCH := "unknown"
 GIT_HASH := $(shell git log --pretty=format:%H -n 1)
@@ -34,13 +34,13 @@ all: build
 .PHONY: build 
 build: testbuild
 	for s in `ls ${SRC_PATH}`; do \
-		CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} $(CC) -a -installsuffix cgo -ldflags "-X main.BinPrefix=${BINPREFIX} main.Sys=${SYS} -X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o ${BIN_PATH}/"$$s"_"${OS}"_"${ARCH}" ${CFLAGS} ${SRC_PATH}/$$s/$$s.go; \
+		CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} $(CC) -a -installsuffix cgo -ldflags "-X main.BinPrefix=${BINPREFIX} -X main.Sys=${SYS} -X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o ${BIN_PATH}/"$$s"_"${OS}"_"${ARCH}" ${CFLAGS} ${SRC_PATH}/$$s/$$s.go; \
 	done
 
 .PHONY: testbuild 
 testbuild: 
 	for s in `ls ${SRC_PATH}`; do \
-		CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} $(CC) -a -installsuffix cgo -ldflags "-X main.BinPrefix=${BINPREFIX} main.Sys=${SYS} -X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o ${BIN_PATH}/"$$s" ${CFLAGS} ${SRC_PATH}/$$s/$$s.go; \
+		CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} $(CC) -a -installsuffix cgo -ldflags "-X main.BinPrefix=${BINPREFIX} -X main.Sys=${SYS} -X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o ${BIN_PATH}/"$$s" ${CFLAGS} ${SRC_PATH}/$$s/$$s.go; \
 	done
 
 .PHONY: tar-deb
