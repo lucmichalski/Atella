@@ -134,8 +134,10 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 		case "help":
 			c.help()
 		case "update":
-			if len(msgMap) > 2 {
+			if len(msgMap) > 1 {
 				version := msgMap[1]
+				AtellaLogger.LogSystem(fmt.Sprintf("Receive update to %s from %s",
+					version, AtellaConfig.Version))
 				if version != AtellaConfig.Version {
 					AtellaLogger.LogSystem(fmt.Sprintf("Initiate install %s",
 						version))
@@ -145,6 +147,7 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 					err := cmd.Run()
 					if err != nil {
 						AtellaLogger.LogError("Failed exec cli for update")
+						AtellaLogger.LogError(fmt.Sprintf("%s", err))
 					}
 				}
 			}
@@ -159,6 +162,9 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 					AtellaConfig.MasterVector[c.params.currentClientHostname] = vec
 				}
 			}
+		default:
+			AtellaLogger.LogWarning(fmt.Sprintf("Unknown cmd %s [%s]\n",
+				msgMap[0], msg))
 		}
 	} else if msg == conf.Security.Code {
 		AtellaLogger.LogInfo(fmt.Sprintf("Server receive [%s], set canTalk -> true",

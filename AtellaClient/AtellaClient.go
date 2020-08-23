@@ -319,7 +319,8 @@ func (c *ServerClient) SendToMaster(query string) error {
 				AtellaConfig.CurrentMasterServerIndex %
 					len(c.conf.MasterServers.Hosts)
 		} else {
-			_, err = c.masterconn.Write([]byte("Meow!\n"))
+			_, err = c.masterconn.Write(
+				[]byte(fmt.Sprintf("%s\n", c.conf.Security.Code)))
 			_, err = c.masterconn.Write([]byte(query))
 			c.masterconn.Close()
 			masterServerIndex = AtellaConfig.CurrentMasterServerIndex
