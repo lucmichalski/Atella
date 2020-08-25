@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math"
 	"net"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -133,27 +132,34 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 			c.Send(fmt.Sprintf("%s\n", AtellaConfig.Version))
 		case "help":
 			c.help()
-		case "update":
-			if len(msgMap) > 1 {
-				version := msgMap[1]
-				AtellaLogger.LogSystem(fmt.Sprintf("Receive update to %s from %s",
-					version, AtellaConfig.Version))
-				if version != AtellaConfig.Version {
-					AtellaLogger.LogSystem(fmt.Sprintf("Initiate install %s",
-						version))
-					cmd := exec.Command(fmt.Sprintf("%s/atella-cli",
-						AtellaConfig.BinPrefix),
-						"-cmd", "update", "-to-version", version)
-					err := cmd.Run()
-					if err != nil {
-						AtellaLogger.LogError("Failed exec cli for update")
-						AtellaLogger.LogError(
-							fmt.Sprintf("%s/atella-cli -cmd update -to-version %s",
-								AtellaConfig.BinPrefix, version))
-						AtellaLogger.LogError(fmt.Sprintf("%s", err))
-					}
-				}
-			}
+		// case "update":
+		// 	if len(msgMap) > 1 {
+		// 		version := msgMap[1]
+		// 		AtellaLogger.LogSystem(fmt.Sprintf("Receive update to %s from %s",
+		// 			version, AtellaConfig.Version))
+		// 		if version != AtellaConfig.Version {
+		// 			AtellaLogger.LogSystem(fmt.Sprintf("Initiate install %s",
+		// 				version))
+		// 			cmd := exec.Command(fmt.Sprintf("%s/atella-cli",
+		// 				AtellaConfig.BinPrefix),
+		// 				"-cmd", "update", "-to-version", version)
+		// 			err := cmd.Start()
+		// 			// err := syscall.Exec(fmt.Sprintf("%s/atella-cli",
+		// 			// 	AtellaConfig.BinPrefix),
+		// 			// 	[]string{fmt.Sprintf("%s/atella-cli",
+		// 			// 		AtellaConfig.BinPrefix),
+		// 			// 		"-cmd", "update", "-to-version", version}, os.Environ())
+
+		// 			if err != nil {
+		// 				AtellaLogger.LogError("Failed exec cli for update")
+		// 				AtellaLogger.LogError(
+		// 					fmt.Sprintf("%s/atella-cli -cmd update -to-version %s",
+		// 						AtellaConfig.BinPrefix, version))
+		// 				AtellaLogger.LogError(fmt.Sprintf("%s", err))
+		// 			}
+		// 			cmd.Process.Release()
+		// 		}
+		// 	}
 		case "set":
 			if len(msgMap) > 2 {
 				c.params.currentClientHostname = msgMap[1]

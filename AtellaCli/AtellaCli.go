@@ -133,7 +133,14 @@ func Command() {
 			cmd := exec.Command(fmt.Sprintf("%s/atella-updater.sh",
 				BinPrefix), "master.atella.local",
 				fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys)
-			err := cmd.Run()
+			err := cmd.Start()
+
+			// err := syscall.Exec(fmt.Sprintf("%s/atella-updater.sh",
+			// 	AtellaConfig.BinPrefix),
+			// 	[]string{fmt.Sprintf("%s/atella-cli",
+			// 		AtellaConfig.BinPrefix), "master.atella.local",
+			// 		fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys},
+			// 	os.Environ())
 			if err != nil {
 				AtellaLogger.LogError("Failed exec cli for update")
 				AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
