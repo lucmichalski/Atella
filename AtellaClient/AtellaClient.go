@@ -310,8 +310,10 @@ func (c *ServerClient) SendToMaster(query string) error {
 		return fmt.Errorf("Master servers not specifiyed")
 	}
 	for {
-		c.masterconn, err = net.Dial("tcp", fmt.Sprintf("%s:5223",
-			c.conf.MasterServers.Hosts[AtellaConfig.CurrentMasterServerIndex]))
+		masterAddr := strings.Split(
+			c.conf.MasterServers.Hosts[AtellaConfig.CurrentMasterServerIndex], " ")
+		c.masterconn, err = net.DialTimeout("tcp", fmt.Sprintf("%s:5223",
+			masterAddr[0]), time.Duration(c.conf.Agent.NetTimeout)*time.Second)
 		if err != nil {
 			AtellaConfig.CurrentMasterServerIndex =
 				AtellaConfig.CurrentMasterServerIndex + 1
