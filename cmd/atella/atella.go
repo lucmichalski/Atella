@@ -42,6 +42,10 @@ func handle(c chan os.Signal) {
 			if err != nil {
 				AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
 			}
+			err = conf.LoadDirectory(configDirPath)
+			if err != nil {
+				AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+			}
 			conf.Init()
 			conf.PrintJsonConfig()
 			client.Reload(conf)
