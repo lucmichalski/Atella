@@ -106,10 +106,10 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 	case "export":
 		if len(msgMap) > 1 {
 			if msgMap[1] == "vector" {
-				c.Send(fmt.Sprintf("%s\n", AtellaConfig.GetJsonVector()))
+				c.Send(fmt.Sprintf("ackvector %s\n", AtellaConfig.GetJsonVector()))
 				AtellaConfig.PrintJsonVector()
 			} else if msgMap[1] == "master" {
-				c.Send(fmt.Sprintf("%s\n", AtellaConfig.GetJsonMasterVector()))
+				c.Send(fmt.Sprintf("ackmaster %s\n", AtellaConfig.GetJsonMasterVector()))
 				AtellaConfig.PrintJsonMasterVector()
 			}
 		}
@@ -129,7 +129,7 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 		case "hostname":
 			c.Send(fmt.Sprintf("ackhostname %s\n", conf.Agent.Hostname))
 		case "version":
-			c.Send(fmt.Sprintf("%s\n", AtellaConfig.Version))
+			c.Send(fmt.Sprintf("ackversion %s\n", AtellaConfig.Version))
 		case "help":
 			c.help()
 		// case "update":

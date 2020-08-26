@@ -3,6 +3,7 @@ package AtellaCli
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"runtime"
@@ -15,24 +16,25 @@ import (
 )
 
 var (
-	conf           *AtellaConfig.Config = nil
-	cmd            string               = ""
-	msg            string               = "Test"
-	reportType     string               = "Test"
-	configFilePath string               = ""
-	configDirPath  string               = ""
-	target         string               = "all"
-	printVersion   bool                 = false
-	printPidFile   bool                 = false
-	GitCommit      string               = "unknown"
-	GoVersion      string               = "unknown"
-	Version        string               = "unknown"
-	Service        string               = "Atella-Cli"
-	Arch           string               = "unknown"
-	Sys            string               = "unknown"
-	BinPrefix      string               = "/usr/bin"
-	updateVersion  string               = "unknown"
-	pkgTemplate    string               = "atella_%s-1_%s.%s"
+	conf              *AtellaConfig.Config = nil
+	cmd               string               = ""
+	msg               string               = "Test"
+	reportType        string               = "Test"
+	configFilePath    string               = ""
+	configDirPath     string               = ""
+	target            string               = "all"
+	printVersion      bool                 = false
+	printPidFile      bool                 = false
+	GitCommit         string               = "unknown"
+	GoVersion         string               = "unknown"
+	Version           string               = "unknown"
+	Service           string               = "Atella-Cli"
+	Arch              string               = "unknown"
+	Sys               string               = "unknown"
+	BinPrefix         string               = "/usr/bin"
+	updateVersion     string               = "unknown"
+	pkgTemplate       string               = "atella_%s-1_%s.%s"
+	masterServerIndex int                  = 0
 )
 
 // Function initialize application runtime flags.
@@ -130,10 +132,38 @@ func Command() {
 	case "update":
 		// TODO: Create environment for master servers from atella config
 		if updateVersion != "" {
-			cmd := exec.Command(fmt.Sprintf("%s/atella-updater.sh",
-				BinPrefix), "master.atella.local",
-				fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys)
-			err := cmd.Start()
+			for {
+				masterAddr := strings.Split(
+					conf.MasterServers.Hosts[AtellaConfig.CurrentMasterServerIndex], " ")
+				masterconn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:5223",
+					masterAddr[0]), time.Duration(conf.Agent.NetTimeout)*time.Second)
+				if err != nil {
+					AtellaConfig.CurrentMasterServerIndex =
+						AtellaConfig.CurrentMasterServerIndex + 1
+					AtellaConfig.CurrentMasterServerIndex =
+						AtellaConfig.CurrentMasterServerIndex %
+							len(conf.MasterServers.Hosts)
+				} else {
+					masterconn.Close()
+					masterServerIndex = AtellaConfig.CurrentMasterServerIndex
+					AtellaLogger.LogSystem(fmt.Sprintf("%s using for upgrade",
+						masterAddr[0]))
+					cmd := exec.Command(fmt.Sprintf("%s/atella-updater.sh",
+						BinPrefix),
+						masterAddr[0],
+						fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys)
+					err = cmd.Start()
+					if err != nil {
+						AtellaLogger.LogError("Failed exec cli for update")
+						AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+					}
+					break
+				}
+				if AtellaConfig.CurrentMasterServerIndex == masterServerIndex {
+					AtellaLogger.LogError("Could not connect to any of masters")
+					break
+				}
+			}
 
 			// err := syscall.Exec(fmt.Sprintf("%s/atella-updater.sh",
 			// 	AtellaConfig.BinPrefix),
@@ -141,10 +171,6 @@ func Command() {
 			// 		AtellaConfig.BinPrefix), "master.atella.local",
 			// 		fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys},
 			// 	os.Environ())
-			if err != nil {
-				AtellaLogger.LogError("Failed exec cli for update")
-				AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
-			}
 		} else {
 			AtellaLogger.LogError("Version not specifyed")
 		}
