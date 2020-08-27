@@ -13,8 +13,8 @@ function install_init {
 
 function install_systemd {
     cp -f $SCRIPT_DIR/atella.service $1
-    systemctl enable atella || true
     systemctl daemon-reload || true
+    systemctl enable atella || true
 }
 
 function install_update_rcd {
@@ -47,7 +47,7 @@ chmod 755 $LOG_DIR
 
 if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
 	install_systemd /lib/systemd/system/atella.service
-	deb-systemd-invoke restart atella.service || echo "WARN: systemd not running."
+	systemctl restart atella.service || echo "WARN: systemd not running."
 else
 	install_init
 
