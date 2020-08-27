@@ -54,6 +54,7 @@ tar-deb:
 	cp build/${SERVICE}_${OS}_${ARCH} build/root/${SERVICE}${BINPREFIX}/${SERVICE}; \
 	cp build/${SERVICE}-cli_${OS}_${ARCH} build/root/${SERVICE}${BINPREFIX}/${SERVICE}-cli;  
 	cp pkg/${SERVICE}-updater.sh build/root/${SERVICE}${SCRIPTS_PATH}/${SERVICE}-updater.sh;  
+	cp pkg/${SERVICE}-wrapper.sh build/root/${SERVICE}${SCRIPTS_PATH}/${SERVICE}-wrapper.sh;  
 	cp -r etc/ build/root/${SERVICE}/etc/${SERVICE}
 	cp pkg/atella.service build/root/${SERVICE}${SCRIPTS_PATH}/
 	cp pkg/init.sh build/root/${SERVICE}${SCRIPTS_PATH}/
