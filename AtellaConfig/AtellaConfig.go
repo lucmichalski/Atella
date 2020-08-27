@@ -40,13 +40,14 @@ var (
 	MasterVector             map[string][]VectorType = make(map[string][]VectorType, 0)
 	CurrentMasterServerIndex int                     = 0
 
-	GitCommit string = "unknown"
-	GoVersion string = "unknown"
-	Version   string = "unknown"
-	Service   string = "Atella"
-	Arch      string = "unknown"
-	Sys       string = "unknown"
-	BinPrefix string = "/usr/bin"
+	GitCommit     string = "unknown"
+	GoVersion     string = "unknown"
+	Version       string = "unknown"
+	Service       string = "Atella"
+	Arch          string = "unknown"
+	Sys           string = "unknown"
+	BinPrefix     string = "/usr/bin"
+	ScriptsPrefix string = "/usr/lib/atella/scripts"
 )
 
 type AtellaConfig struct {

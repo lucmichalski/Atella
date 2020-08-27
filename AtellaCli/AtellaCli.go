@@ -32,6 +32,7 @@ var (
 	Arch              string               = "unknown"
 	Sys               string               = "unknown"
 	BinPrefix         string               = "/usr/bin"
+	ScriptsPrefix     string               = "/usr/lib/atella/scripts"
 	updateVersion     string               = "unknown"
 	pkgTemplate       string               = "atella_%s-1_%s.%s"
 	masterServerIndex int                  = 0
@@ -149,7 +150,7 @@ func Command() {
 					AtellaLogger.LogSystem(fmt.Sprintf("%s using for upgrade",
 						masterAddr[0]))
 					cmd := exec.Command(fmt.Sprintf("%s/atella-updater.sh",
-						BinPrefix),
+						ScriptsPrefix),
 						masterAddr[0],
 						fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys)
 					err = cmd.Start()

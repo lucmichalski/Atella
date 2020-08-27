@@ -29,6 +29,7 @@ var (
 	Arch           string                     = "unknown"
 	Sys            string                     = "unknown"
 	BinPrefix      string                     = "/usr/bin"
+	ScriptsPrefix  string                     = "/usr/lib/atella/scripts"
 )
 
 // Interrupts handler
@@ -97,6 +98,7 @@ func initFlags() {
 	AtellaConfig.Arch = Arch
 	AtellaConfig.Sys = Sys
 	AtellaConfig.BinPrefix = BinPrefix
+	AtellaConfig.ScriptsPrefix = ScriptsPrefix
 }
 
 func main() {

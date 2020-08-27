@@ -5,13 +5,14 @@ import (
 )
 
 var (
-	GitCommit string = "unknown"
-	GoVersion string = "unknown"
-	Version   string = "unknown"
-	Service   string = "Atella-Cli"
-	Arch      string = "unknown"
-	Sys       string = "unknown"
-	BinPrefix string = "/usr/bin"
+	GitCommit     string = "unknown"
+	GoVersion     string = "unknown"
+	Version       string = "unknown"
+	Service       string = "Atella-Cli"
+	Arch          string = "unknown"
+	Sys           string = "unknown"
+	BinPrefix     string = "/usr/bin"
+	ScriptsPrefix string = "/usr/lib/atella/scripts"
 )
 
 func main() {
@@ -22,5 +23,6 @@ func main() {
 	AtellaCli.Arch = Arch
 	AtellaCli.Version = Version
 	AtellaCli.BinPrefix = BinPrefix
+	AtellaCli.ScriptsPrefix = ScriptsPrefix
 	AtellaCli.Command()
 }
