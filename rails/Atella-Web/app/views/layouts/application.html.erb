@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AtellaWeb</title>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag 'application', media: 'all', 'data-turbolinks-track': 'reload' %>
+    <%= javascript_pack_tag 'application', 'data-turbolinks-track': 'reload' %>
+  </head>
+  <body>
+    <div id="root">
+      <div class="root">
+        <div class="top">
+          <header class="head-main">
+            <div class="header-top">
+              <a class="header-main-link" href="<%= root_path %>">
+                <%= image_tag("atella-logo.svg", :alt => "Atella", :class => "atella-logo") %>
+              </a>
+              <nav class="nav-main-menu">
+                <div class="nav-main-menu-element">
+                  <a href="<%= sectors_path %>">Sectors</a>
+                </div>
+                <div class="nav-main-menu-element">
+                  <a href="<%= hosts_path %>">Hosts</a>
+                </div>
+                <div class="nav-main-menu-element">
+                  <a href="<%= pkg_path %>">Packages</a>
+                </div>
+                <div class="nav-main-menu-element">
+                  <a href="<%= cfg_path %>">Configs</a>
+                </div>
+              </nav>
+              <div class="client-info">
+                <div class="client-ip-address">
+                  IP: <%= request.remote_addr %>
+                </div>
+              </div>
+            </div>
+          </header>
+        </div>
+        <main class="main">
+          <div id="web">
+            <%- unless @atella["agent"]["master"] %>
+              <div class="divTable error-table">
+                <div class="divTableHeading">
+                  <div class="divTableRow">
+                    <div class="divTableHead">
+                      <h2>
+                        <b>
+                          Web interface works only on master server. Sorry :(
+                        </b>
+                      </h2>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <%- else %>
+              <%= yield %>
+            <%- end %>
+          </div>
+        </main>
+        <footer class="foot-main">
+          <div class="copyright">© R9ODT</div>
+        </footer>
+      </div>
+    </div>
+    <%- unless Rails.env.production? %>
+      <%= console %>
+    <%- end %>
+  </body>
+</html>

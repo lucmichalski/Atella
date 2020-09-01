@@ -1,0 +1,40 @@
+<div class="divTable def-table">
+  <div class="divTableHeading">
+    <div class="divTableRow">
+      <div class="divTableHead">DEB</div>
+      <div class="divTableHead">RPM</div>
+      <div class="divTableHead">TAR</div>
+    </div>
+  </div>
+  <div class="divTableBody">
+    <div class="divTableRow">
+      <div class="divTableCell">
+        <%- if @debPkgDir.length == 0 %>
+          Nothing packages
+        <%- end %>
+        <%- @debPkgDir.each do |file| %>
+          <%- f = file.split("/").last %>
+          <%= link_to f,  "/download/pkg/deb/" + f, {class: "package-link"} %>
+        </a>
+        <BR>
+      <%- end %></div>
+    <div class="divTableCell">
+      <%- if @rpmPkgDir.length == 0 %>
+        Nothing packages
+      <%- end %>
+      <%- @rpmPkgDir.each do |file| %>
+        <%- f = file.split("/").last %>
+        <%= link_to f, "/download/pkg/rpm/" + f, {class: "package-link"} %>
+        <BR>
+      <%- end %></div>
+    <div class="divTableCell">
+      <%- if @tarPkgDir.length == 0 %>
+        Nothing packages
+      <%- end %>
+      <%- @tarPkgDir.each do |file| %>
+        <%- f = file.split("/").last %>
+        <%= link_to f, "/download/pkg/tar/" + f, {class: "package-link"} %>
+        <BR>
+      <%- end %></div>
+  </div>
+</div>

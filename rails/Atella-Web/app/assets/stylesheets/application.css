@@ -1,0 +1,183 @@
+/*
+ * This is a manifest file that'll be compiled into application.css, which will include all the files
+ * listed below.
+ *
+ * Any CSS and SCSS file within this directory, lib/assets/stylesheets, or any plugin's
+ * vendor/assets/stylesheets directory can be referenced here using a relative path.
+ *
+ * You're free to add application-wide styles to this file and they'll appear at the bottom of the
+ * compiled file so the styles you add here take precedence over styles defined in any other CSS/SCSS
+ * files in this directory. Styles in this file should be added after the last require_* statement.
+ * It is generally better to create a new file per style scope.
+ *
+ *= require_tree .
+ *= require_self
+ */
+
+ body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+div {
+  display: block;
+}
+
+a {
+  color: rgb(255, 255, 255) !important;
+  text-decoration: none;
+}
+
+a:link:active	{
+  color: rgb(255, 0, 0) !important;
+}
+
+
+div.root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+footer.foot-main {
+  padding-top: 40px;
+  padding-bottom: 40px;
+  background-color: #dfdfdf;
+  color: #666;
+}
+
+img.atella-logo {
+  width: 101px;
+  height: 22px;
+  vertical-align: middle;
+}
+
+div.header-top {
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 15px;
+  padding-left: 15px;
+  max-width: 1200px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+div.top {
+  flex-shrink: 0;
+}
+
+nav.nav-main-menu {
+  margin-right: auto;
+  margin-left: 20px;
+}
+
+main.main {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  height: 100%;
+}
+
+div.nav-main-menu-element {
+  display: inline-block;
+  padding-right: 10px;
+}
+
+div.copyright {
+  text-align: end;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 15px;
+  padding-left: 15px;
+  max-width: 1200px;
+  box-sizing: border-box;
+}
+
+a.header-main-link {
+  color: rgb(255, 255, 255) !important;
+  text-decoration: none;
+}
+
+header.head-main {
+  height: 60px;
+  background-color: #0059bf;
+  color: #fff;
+  box-sizing: border-box;
+  margin-bottom: 0px;
+}
+
+div.client-info {
+  color: #fff;
+  box-sizing: border-box;
+  text-align: end;
+}
+
+div.client-info .client-ip-address {
+  display: inline-block;
+  padding-right: 10px;
+}
+
+div.def-table {
+  border: 2px solid #000000;
+  background-color: #E6E6E6;
+  width: auto;
+  height: auto;
+  text-align: center;
+  border-collapse: collapse;
+}
+.divTable.def-table .divTableCell, .divTable.def-table .divTableHead {
+  border: 1px solid #4A4A4A;
+  padding: 3px 2px;
+}
+.divTable.def-table .divTableBody .divTableCell {
+  font-size: 13px;
+  color: #000000;
+}
+.divTable.def-table .divTableRow:nth-child(even) {
+  background: #888888;
+}
+.divTable.def-table .divTableHeading {
+  background: #5592BB;
+  border-bottom: 3px solid #000000;
+}
+.divTable.def-table .divTableHeading .divTableHead {
+  font-size: 15px;
+  font-weight: bold;
+  color: #FFFFFF;
+  text-align: center;
+  border-left: 2px solid #4A4A4A;
+}
+.divTable.def-table .divTableHeading .divTableHead:first-child {
+  border-left: none;
+}
+
+.def-table .tableFootStyle {
+  font-size: 12px;
+}
+
+div.error-table {
+  border: 0px ;
+  background-color: #ffffff;
+  width: auto;
+  height: auto;
+  text-align: center;
+}
+
+.divTable.error-table .divTableHeading .divTableHead {
+  font-size: 15px;
+  font-weight: bold;
+  color: #ff0000;
+  text-align: center;
+}
+
+.divTable{ display: table; }
+.divTableRow { display: table-row; }
+.divTableHeading { display: table-header-group; width: 2%}
+.divTableCell, .divTableHead { display: table-cell; width: 2%}
+.divTableHeading { display: table-header-group; width: 2%}
+.divTableFoot { display: table-footer-group;}
+.divTableBody { display: table-row-group;}

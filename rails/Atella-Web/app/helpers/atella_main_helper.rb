@@ -1,0 +1,2 @@
+module AtellaMainHelper
+end

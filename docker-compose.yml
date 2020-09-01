@@ -8,8 +8,8 @@ services:
     volumes:
       - "./clickhouse/etc/clickhouse-server/config.xml:/etc/clickhouse-server/config.xml"
       - "./clickhouse/var/lib/clickhouse:/var/lib/clickhouse"
-    ports:
-      - "8123:8123/tcp"
+    # ports:
+    #   - "8123:8123/tcp"
     networks:
       network_1:
         ipv4_address: 10.2.0.10
@@ -96,6 +96,18 @@ services:
     networks:
       network_1:
         ipv4_address: 10.2.0.7
+  atella_redis:
+    image: ${redis_image}
+    container_name: atella_redis
+    hostname: redis
+    restart: always
+    env_file:
+      - ./atella_redis.env
+    ports:
+      - "6379:6379"
+    networks:
+      network_1:
+        ipv4_address: 10.2.0.8
 
 networks:
   network_1:

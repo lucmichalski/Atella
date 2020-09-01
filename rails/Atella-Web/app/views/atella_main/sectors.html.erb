@@ -1,0 +1,39 @@
+<%- if @error.nil? %>
+  <div class="divTable def-table">
+    <div class="divTableHeading">
+      <div class="divTableRow">
+        <div class="divTableHead">Sector</div>
+        <div class="divTableHead">Hosts</div>
+      </div>
+    </div>
+    <div class="divTableBody">
+      <%- @sectorsConfig["sectors"].each do |sec| %>
+        <div class="divTableRow">
+          <div class="divTableCell">
+            <%= sec[0] %>
+          </div>
+          <div class="divTableCell">
+            <%- sec[1]["hosts"].each do |host| %>
+              <%= host %>
+              <BR>
+            <%- end %>
+          </div>
+        </div>
+      <%- end %>
+    </div>
+  </div>
+<%- else %>
+  <div class="divTable error-table">
+    <div class="divTableHeading">
+      <div class="divTableRow">
+        <div class="divTableHead">
+          <h2>
+            <b>
+              <%= @error %>
+            </b>
+          </h2>
+        </div>
+      </div>
+    </div>
+  </div>
+<%- end %>

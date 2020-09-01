@@ -4,4 +4,5 @@ IMAGES=(
   telegraf 1.14.1 1.14.1 "r9odt/telegraf:1.14.1"
   mariadb 1:10.1.44-0ubuntu0.18.04.1 10.1 "mariadb:10.5.4"
   clickhouse 20.4.2.9 20.4.2.9 "yandex/clickhouse-server:20.5.3.27"
+  redis latest latest "redis:latest"
 )

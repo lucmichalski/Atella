@@ -52,6 +52,7 @@ func initFlags() {
 			"Reload\n\t"+
 			"Rotate\n\t"+
 			"Update\n\t"+
+			"WrapConfig\n\t"+
 			"Report")
 	flag.StringVar(&msg, "message", "Test",
 		"Message. Work only with run mode \"Report\" & report type \"Custom\"")

@@ -1,0 +1,52 @@
+<%- if @error.nil? %>
+  <div class="divTable def-table">
+    <div class="divTableHeading">
+      <div class="divTableRow">
+        <div class="divTableHead">Index</div>
+        <div class="divTableHead">Host</div>
+        <div class="divTableHead">Version</div>
+        <div class="divTableHead">Sectors</div>
+        <div class="divTableHead">Master</div>
+        <div class="divTableHead">Status</div>
+      </div>
+    </div>
+    <div class="divTableBody">
+      <%- @hostsConfig.each_with_index do |host, i| %>
+        <div class="divTableRow">
+          <div class="divTableCell">
+            <%= host["id"] %>
+          </div>
+          <div class="divTableCell">
+            <%= host["hostname"] %>
+          </div>
+          <div class="divTableCell">
+            <%= host["version"] %>
+          </div>
+          <div class="divTableCell">
+            <%= "Not implemented" %>
+          </div>
+          <div class="divTableCell">
+            <%= host["is_master"] %>
+          </div>
+          <div class="divTableCell">
+            <%= "Not implemented" %>
+          </div>
+        </div>
+      <%- end %>
+    </div>
+  </div>
+<%- else %>
+  <div class="divTable error-table">
+    <div class="divTableHeading">
+      <div class="divTableRow">
+        <div class="divTableHead">
+          <h2>
+            <b>
+              <%= @error %>
+            </b>
+          </h2>
+        </div>
+      </div>
+    </div>
+  </div>
+<%- end %>
