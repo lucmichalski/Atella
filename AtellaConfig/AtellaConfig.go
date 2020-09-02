@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"../AtellaLogger"
 	"../AtellaMailChannel"
@@ -38,6 +39,7 @@ var (
 	Pid                      int                     = 0
 	Vector                   []VectorType            = make([]VectorType, 0)
 	MasterVector             map[string][]VectorType = make(map[string][]VectorType, 0)
+	MasterVectorMutex                                = sync.RWMutex{}
 	CurrentMasterServerIndex int                     = 0
 
 	GitCommit     string = "unknown"
@@ -276,7 +278,10 @@ func PrintJsonMasterVector() {
 
 // Function return MasterVector as json format
 func GetJsonMasterVector() []byte {
+	MasterVectorMutex.RLock()
 	res, _ := json.Marshal(MasterVector)
+	MasterVectorMutex.RUnlock()
+
 	return res
 }
 

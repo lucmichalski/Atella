@@ -81,7 +81,7 @@ deb-64: tar-deb docker-pkgbuilder-64
 
 .PHONY: clean 
 clean:
-	rm -rf $(BIN_PATH)/*
+	rm -rf ${BIN_PATH}/*
 
 .PHONY: restruct 
 restruct: clean all

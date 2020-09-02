@@ -168,7 +168,9 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 					c.params.currentClientVectorJson != "" {
 					var vec []AtellaConfig.VectorType
 					json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
+					AtellaConfig.MasterVectorMutex.Lock()
 					AtellaConfig.MasterVector[c.params.currentClientHostname] = vec
+					AtellaConfig.MasterVectorMutex.Unlock()
 				}
 			}
 		default:
@@ -235,7 +237,10 @@ func (s *server) MasterServer() {
 	if conf.Agent.Master {
 		AtellaLogger.LogSystem("I'm master server")
 	}
+
+	AtellaConfig.MasterVectorMutex.Lock()
 	AtellaConfig.MasterVector = make(map[string][]AtellaConfig.VectorType, 0)
+	AtellaConfig.MasterVectorMutex.Unlock()
 	for {
 		time.Sleep(time.Duration(conf.Agent.Interval) * time.Second)
 		s.insertVector()
