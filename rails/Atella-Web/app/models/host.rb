@@ -39,6 +39,7 @@ class Host < ApplicationRecord
 
   def Host.reload_hosts_config
     settings = Rails.application.config.atella
+    redis = Redis.new(host: settings["atella"]["redisHost"])
     error = nil
     begin
       mastersConfig = TOML.load_file(settings["atella"]["masterServersConfig"])
@@ -93,19 +94,6 @@ class Host < ApplicationRecord
                   end
                   h.save if change
                 end
-                m = Master.find_by(hostname: hostname)
-                if is_master
-                  if m.nil?
-                    m = Master.new
-                    m.hostname = hostname
-                    m.vector = "{}"
-                    m.save
-                  end
-                else
-                  unless m.nil?
-                    m.delete
-                  end
-                end
               end
             end
           end
@@ -142,17 +130,11 @@ class Host < ApplicationRecord
               end
               h.save if change
             end
-            m = Master.find_by(hostname: hostname)
-            if is_master
-              if m.nil?
-                m = Master.new
-                m.hostname = hostname
-                m.vector = "{}"
-                m.save
-              end
-            else
-              unless m.nil?
-                m.delete
+            m = Host.where(:is_master => true)
+            m.each do |master|
+              redisVector = redis.get(master.hostname)
+              if redisVector.nil?
+                 redis.set(master.hostname, "{}")
               end
             end
           end
