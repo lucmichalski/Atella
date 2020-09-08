@@ -17,7 +17,8 @@ module ApplicationHelper
                 break
               when "canTalk"
                 s.puts("export master")
-                status["status"] = s.gets.split[1]
+                st = s.gets.split[1]
+                status["status"] = JSON.parse(st)
                 s.puts("version")
                 status["version"] = s.gets.split[1]
                 unless status["version"].nil?
@@ -36,6 +37,6 @@ module ApplicationHelper
         end
       end
     end
-    return status
+    return status.to_json
   end
 end

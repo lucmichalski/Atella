@@ -14,7 +14,13 @@
             <%= m.hostname %>
           </div>
           <div class="divTableCell">
-            <%= @redis.get(m.hostname) %>
+            <%# <%= @redis.get(m.hostname) %>
+            <%- redisData = @redis.get("r9odt-pc") %>
+            <%- redisDataPretty = JSON.pretty_generate(JSON.parse(redisData)) %>
+            <%- unless redisDataPretty.nil? %>
+              <%- redisDataPretty.gsub!('\\', '') %>
+            <%- end %>
+            <%= redisDataPretty %>
           </div>
           <div class="divTableCell">
             <%= m.version %>
