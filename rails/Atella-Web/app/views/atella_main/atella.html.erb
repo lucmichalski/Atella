@@ -1,0 +1,46 @@
+<%- if @error.nil? %>
+  <div class="divTable def-table">
+    <div class="divTableHeading">
+      <div class="divTableRow">
+        <div class="divTableHead">Master Server</div>
+        <div class="divTableHead">Vector</div>
+        <div class="divTableHead">Version</div>
+      </div>
+    </div>
+    <div class="divTableBody">
+      <%- @masters.each do |m| %>
+        <div class="divTableRow">
+          <div class="divTableCell">
+            <%= m.hostname %>
+          </div>
+          <div class="divTableCell">
+            <%# <%= @redis.get(m.hostname) %>
+            <%- redisData = @redis.get("r9odt-pc") %>
+            <%- redisDataPretty = JSON.pretty_generate(JSON.parse(redisData)) %>
+            <%- unless redisDataPretty.nil? %>
+              <%- redisDataPretty.gsub!('\\', '') %>
+            <%- end %>
+            <%= redisDataPretty %>
+          </div>
+          <div class="divTableCell">
+            <%= m.version %>
+          </div>
+        </div>
+      <%- end %>
+    </div>
+  </div>
+<%- else %>
+  <div class="divTable error-table">
+    <div class="divTableHeading">
+      <div class="divTableRow">
+        <div class="divTableHead">
+          <h2>
+            <b>
+              <%= @error %>
+            </b>
+          </h2>
+        </div>
+      </div>
+    </div>
+  </div>
+<%- end %>

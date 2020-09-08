@@ -1,0 +1,6 @@
+/etc
+/*.yml
+/replicate.sh
+/etc.zk
+/*.xml
+/var/lib/clickhouse

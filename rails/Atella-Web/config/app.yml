@@ -1,0 +1,11 @@
+atella:
+  atellaConfig: "/etc/atella/atella.conf"
+  masterServersConfig: "/etc/atella/conf.d/master_servers.conf"
+  sectorsConfig: "/etc/atella/conf.d/sectors.conf"
+  securityConfig: "/etc/atella/conf.d/sec.conf"
+  filesDirectory: "/usr/share/atella/"
+  packagesDirectory: "pkg/"
+  configsDirectory: "cfg/"
+  redisHost: "127.0.0.1"
+  redisPort: "6379"
+  

@@ -1,0 +1,4 @@
+#!/bin/bash
+clickhouse-client -q "select distinct partition from system.parts where active=1 and database='system' and table='query_log' and max_date<today()-1;" | while read PART; do clickhouse-client -q "ALTER TABLE system.query_log DROP PARTITION ('"$PART"')";done
+clickhouse-client -q "select distinct partition from system.parts where active=1 and database='system' and table='query_thread_log' and max_date<today()-1;" | while read PART; do clickhouse-client -q "ALTER TABLE system.query_thread_log DROP PARTITION ('"$PART"')";done
+clickhouse-client -q "select distinct partition from system.parts where active=1 and database='system' and table='trace_log' and max_date<today()-1;" | while read PART; do clickhouse-client -q "ALTER TABLE system.trace_log DROP PARTITION ('"$PART"')";done

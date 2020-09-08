@@ -1,0 +1,17 @@
+[Unit]
+Description=Atella. Agent for distributed checking servers status.
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/atella
+ExecReload=/usr/bin/atella-cli -cmd reload
+User=atella
+Group=atella
+Restart=always
+TimeoutStopSec=30s
+LimitMEMLOCK=infinity
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

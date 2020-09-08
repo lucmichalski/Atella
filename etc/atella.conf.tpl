@@ -1,0 +1,32 @@
+[agent]
+  hostname = ""
+  omit_hostname = false
+  log_level = 2
+  log_file = "/var/log/atella/atella.log"
+  pid_file = "/usr/share/atella/atella.pid"
+  proc_file = "/usr/share/atella/atella.proc"
+  host_cnt = 1
+  hex_len = 10
+  message_path = "/usr/share/atella/msg"
+  master = false
+  interval = 10
+  net_timeout = 2
+  
+# [channels.TgSibnet]
+#   address = "localhost"
+#   port = 1
+#   protocol = "tcp"
+#   to = ["username"]
+#   disabled = false
+  
+# [channels.Mail]
+#   address = "localhost"
+#   port = 25
+#   auth = false
+#   username = "user"
+#   password = "password"
+#   If ended with @hostname hostname will be replace to "hostname" parameter in 
+#   agent section
+#   from = "atella@hostname"
+#   to = ["username@domain.com"]
+#   disabled = false
