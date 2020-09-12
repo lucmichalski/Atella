@@ -41,6 +41,19 @@ class AtellaMainController < ApplicationController
     @rpmPkgDir = Dir["#{pkgDir}rpm/*.rpm"].sort
     @tarPkgDir = Dir["#{pkgDir}tar/*.tar*"].sort
   end
+  
+  def pkg_post
+    act = params[:act]
+    pkg = params[:pkg]
+    pkgDir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["packagesDirectory"]}"
+    post = params["Delete"]
+    case act
+    when "delete"
+      f = "#{pkgDir}#{pkg}/#{post}"
+      File.delete(f) if File.exist?(f)
+    end
+    redirect_to pkg_path
+  end
 
   def cfg
     dir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["configsDirectory"]}"

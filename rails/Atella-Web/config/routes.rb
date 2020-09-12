@@ -10,6 +10,9 @@ Rails.application.routes.draw do
   get '/sectors' => "atella_main#sectors"
   get '/hosts' => "atella_main#hosts"
   
+  #post
+  post '/pkg/:pkg/:act' => "atella_main#pkg_post"
+
   #404
   get '/*permalink' => 'atella_main#render_404'
 end

@@ -13,8 +13,12 @@
           Nothing packages
         <%- end %>
         <%- @debPkgDir.each do |file| %>
-          <%- f = file.split("/").last %>
-          <%= link_to f,  "/download/pkg/deb/" + f, {class: "package-link"} %>
+          <%- _file = file.split("/").last %>
+        <%= form_for(:server, url: '/pkg/deb/delete') do |_form| %>
+          <%= link_to _file,  "/download/pkg/deb/" + _file, {class: "package-link"} %>
+          <%= _form.button :Delete, name: "Delete", class: "btn btn-primary" , value: _file%>
+        <% end %>
+          <%=%>
         </a>
         <BR>
       <%- end %></div>
@@ -23,8 +27,11 @@
         Nothing packages
       <%- end %>
       <%- @rpmPkgDir.each do |file| %>
-        <%- f = file.split("/").last %>
-        <%= link_to f, "/download/pkg/rpm/" + f, {class: "package-link"} %>
+        <%- _file = file.split("/").last %>
+        <%= form_for(:server, url: '/pkg/rpm/delete') do |_form| %>
+        <%= link_to _file, "/download/pkg/rpm/" + _file, {class: "package-link"} %>
+          <%= _form.button :Delete, name: "Delete", class: "btn btn-primary" , value: _file%>
+        <% end %>
         <BR>
       <%- end %></div>
     <div class="divTableCell">
@@ -32,8 +39,11 @@
         Nothing packages
       <%- end %>
       <%- @tarPkgDir.each do |file| %>
-        <%- f = file.split("/").last %>
-        <%= link_to f, "/download/pkg/tar/" + f, {class: "package-link"} %>
+        <%- _file = file.split("/").last %>
+        <%= form_for(:server, url: '/pkg/tar/delete') do |_form| %>
+          <%= link_to _file, "/download/pkg/tar/" + _file, {class: "package-link"} %>
+          <%= _form.button :Delete, name: "Delete", class: "btn btn-primary" , value: _file%>
+        <% end %>
         <BR>
       <%- end %></div>
   </div>
