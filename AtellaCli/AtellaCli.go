@@ -94,6 +94,7 @@ func initFlags() {
 	}
 }
 
+// Parsing and processing control commands
 func Command() {
 	var err error = nil
 	initFlags()
@@ -166,13 +167,6 @@ func Command() {
 					break
 				}
 			}
-
-			// err := syscall.Exec(fmt.Sprintf("%s/atella-updater.sh",
-			// 	AtellaConfig.BinPrefix),
-			// 	[]string{fmt.Sprintf("%s/atella-cli",
-			// 		AtellaConfig.BinPrefix), "master.atella.local",
-			// 		fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys},
-			// 	os.Environ())
 		} else {
 			AtellaLogger.LogError("Version not specifyed")
 		}

@@ -15,6 +15,7 @@ import (
 	"../AtellaLogger"
 )
 
+// Parameters for each client
 type clientParams struct {
 	canTalk                 bool
 	id                      uint64
@@ -22,12 +23,14 @@ type clientParams struct {
 	currentClientVectorJson string
 }
 
+// Client description
 type ServerClient struct {
 	conn   net.Conn
 	Server *server
 	params clientParams
 }
 
+// Server parameters
 type server struct {
 	address string
 	port    int16
@@ -80,7 +83,7 @@ func (c *ServerClient) Close() error {
 func (s *server) OnNewClient(c *ServerClient) {
 	AtellaLogger.LogInfo(fmt.Sprintf("New connect [%d], can talk with him - %t",
 		global, c.params.canTalk))
-	// c.Send("Meow?\n")
+	// Logical splitting clients by pseudo-unique id
 	c.params.id = global
 	global = global + 1
 	if global == math.MaxInt64 {
