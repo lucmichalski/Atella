@@ -23,4 +23,25 @@ namespace :agents do
       print("#{h.address} #{h.hostname}\n")
     end
   end
+
+  desc "Read database and processing status"
+  task status: :environment do
+    settings = Rails.application.config.atella  
+    masters = Host.where(:is_master => true)
+    redis = Redis.new(host: settings["atella"]["redisHost"])
+    redisVectors = Array.new
+    statuses = Hash.new
+    if masters.nil?
+      print "Not enouth masters!"
+    end
+    masters.each do |m|
+      _r = redis.get(m.hostname
+      redisVectors.append(r) unless _r.nil?
+    end
+    redisVectors.each do |v|
+      _s = JSON.parse(v)
+      s = _s["status"]
+      print "#{s}\n"
+    end
+  end
 end

@@ -13,6 +13,10 @@ class AtellaMainController < ApplicationController
     if @error.nil?
       @redis = Redis.new(host: @settings["atella"]["redisHost"])
       @masters = Host.where(:is_master => true)
+      
+      if @masters.nil?
+        return
+      end
       @masters.each do |m|
         vector = wrap_master_host(m.address, m.hostname, securityConfig)
         redisVector = @redis.get(m.hostname)

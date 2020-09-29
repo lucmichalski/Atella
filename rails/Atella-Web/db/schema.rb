@@ -21,11 +21,4 @@ ActiveRecord::Schema.define(version: 2020_09_12_032652) do
     t.boolean "is_master", default: false, null: false
   end
 
-  create_table "masters", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", force: :cascade do |t|
-    t.string "hostname"
-    t.string "vector"
-    t.datetime "created_at", precision: 6, null: false
-    t.datetime "updated_at", precision: 6, null: false
-  end
-
 end

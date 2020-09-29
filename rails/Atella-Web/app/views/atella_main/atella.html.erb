@@ -15,7 +15,7 @@
           </div>
           <div class="divTableCell">
             <%# <%= @redis.get(m.hostname) %>
-            <%- redisData = @redis.get("r9odt-pc") %>
+            <%- redisData = @redis.get(m.hostname) %>
             <%- redisDataPretty = JSON.pretty_generate(JSON.parse(redisData)) %>
             <%- unless redisDataPretty.nil? %>
               <%- redisDataPretty.gsub!('\\', '') %>
