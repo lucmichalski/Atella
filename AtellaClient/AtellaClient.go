@@ -91,6 +91,7 @@ func (c *ServerClient) Run() {
 					if err != nil {
 						AtellaLogger.LogWarning(fmt.Sprintf("%s", err))
 						vec.Status = false
+						AtellaConfig.Vector[vectorIndex] = vec
 					} else {
 						exit = false
 						connbuf := bufio.NewReader(c.conn)
