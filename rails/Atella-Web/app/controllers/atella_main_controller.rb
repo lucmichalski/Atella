@@ -19,10 +19,15 @@ class AtellaMainController < ApplicationController
       end
       @masters.each do |m|
         vector = wrap_master_host(m.address, m.hostname, securityConfig)
-        redisVector = @redis.get(m.hostname)
-        unless vector.eql?(redisVector)
-          @redis.set(m.hostname, vector)
+        vector = processVector(vector)
+        unless @redis.nil?
+          redisVector = @redis.get(m.hostname)
+        else
+          redisVector = "{}"
         end
+        # unless vector.eql?(redisVector)
+        #   @redis.set(m.hostname, vector)
+        # end
       end
     end
   end

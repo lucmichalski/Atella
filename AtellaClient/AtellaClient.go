@@ -81,16 +81,11 @@ func (c *ServerClient) Run() {
 						currentNeighboursAddr),
 						time.Duration(c.conf.Agent.NetTimeout)*time.Second)
 					vectorIndex := getVectorIndexByHost(currentNeighboursAddr)
-					if vectorIndex >= 0 {
-						vec = AtellaConfig.Vector[vectorIndex]
-					} else {
-						vec = AtellaConfig.VectorType{}
-						vec.Host = currentNeighboursAddr
-						vec.Status = false
-					}
+					vec = AtellaConfig.Vector[vectorIndex]
 					if err != nil {
 						AtellaLogger.LogWarning(fmt.Sprintf("%s", err))
 						vec.Status = false
+						vec.Timestamp = time.Now().Unix()
 						AtellaConfig.Vector[vectorIndex] = vec
 					} else {
 						exit = false
@@ -117,6 +112,7 @@ func (c *ServerClient) Run() {
 								if vectorIndex < 0 {
 									AtellaConfig.Vector = append(AtellaConfig.Vector, vec)
 								} else {
+									vec.Timestamp = time.Now().Unix()
 									AtellaConfig.Vector[vectorIndex] = vec
 								}
 								break
@@ -260,6 +256,8 @@ func (c *ServerClient) AddHost(host string, sector string) {
 					Host:     h,
 					Hostname: "unknown",
 					Status:   false,
+					Interval: c.conf.Agent.Interval,
+					Timestamp : -1,
 					Sectors:  make([]string, 0)}
 			} else {
 				vec = AtellaConfig.Vector[index]
@@ -269,8 +267,10 @@ func (c *ServerClient) AddHost(host string, sector string) {
 					sector)
 			}
 			if index < 0 {
+				vec.Timestamp = time.Now().Unix()
 				AtellaConfig.Vector = append(AtellaConfig.Vector, vec)
 			} else {
+				vec.Timestamp = time.Now().Unix()
 				AtellaConfig.Vector[index] = vec
 			}
 			AtellaLogger.LogInfo(fmt.Sprintf("Added host [%s]",
@@ -281,6 +281,7 @@ func (c *ServerClient) AddHost(host string, sector string) {
 				vec.Sectors = append(vec.Sectors,
 					sector)
 			}
+			vec.Timestamp = time.Now().Unix()
 			AtellaConfig.Vector[index] = vec
 			AtellaLogger.LogInfo(fmt.Sprintf("Added sector [%s] for host [%s]",
 				sector, h))

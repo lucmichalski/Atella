@@ -13,11 +13,11 @@ namespace :agents do
     end
     
     if error 
-      STDERR.print("Fatal: #{error}\n")  
+      STDERR.print("Fatal: #{error}\n")
+      return
     end
     hosts = Host.all
     hosts.each do |h|
-      next if securityConfig["security"].nil?
       res = h.wrap_version(securityConfig["security"]["code"])
       h.save if res
       print("#{h.address} #{h.hostname}\n")
@@ -35,13 +35,51 @@ namespace :agents do
       print "Not enouth masters!"
     end
     masters.each do |m|
-      _r = redis.get(m.hostname
-      redisVectors.append(r) unless _r.nil?
+      _r = redis.get(m.hostname)
+      redisVectors.append(_r) unless _r.nil?
     end
     redisVectors.each do |v|
       _s = JSON.parse(v)
       s = _s["status"]
       print "#{s}\n"
+    end
+  end
+
+  desc "Get vectors from masters"
+  task masters: :environment do
+    error = nil
+    settings = Rails.application.config.atella  
+    begin
+      mastersConfig = TOML.load_file(settings["atella"]["masterServersConfig"])
+      securityConfig = TOML.load_file(settings["atella"]["securityConfig"])
+    rescue => v
+      @error = v
+    end
+
+    if error 
+      STDERR.print("Fatal: #{error}\n") 
+      return 
+    end
+    
+    redis = Redis.new(host: settings["atella"]["redisHost"])
+    masters = Host.where(:is_master => true)
+    if masters.nil? || redis.nil?
+      STDERR.print("Fatal: redis - #{redis.nil?}, masters = #{masters.nil?}\n") 
+      return
+    end
+
+    masters.each do |m|
+      vector = wrap_master_host(m.address, m.hostname, securityConfig)
+      vector = processVector(vector)
+      redisVector = redis.get(m.hostname)
+      unless vector.eql?(redisVector)
+        redis.set(m.hostname, vector)
+        redisDataPretty = JSON.pretty_generate(JSON.parse(vector))
+        unless redisDataPretty.nil?
+          redisDataPretty.gsub!('\\', '')
+        end
+        ActionCable.server.broadcast("Notifications", { action: "vectorUpdate", tagId: "#{m.hostname}_content", content: redisDataPretty})
+      end
     end
   end
 end

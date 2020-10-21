@@ -22,10 +22,12 @@ import (
 )
 
 type VectorType struct {
-	Host     string   `json:"host"`
-	Hostname string   `json:"hostname"`
-	Status   bool     `json:"status"`
-	Sectors  []string `json:"sectors"`
+	Host      string   `json:"host"`
+	Hostname  string   `json:"hostname"`
+	Status    bool     `json:"status"`
+	Interval  int64    `json:"interval"`
+	Timestamp int64    `json:"timestamp"`
+	Sectors   []string `json:"sectors"`
 }
 
 var (

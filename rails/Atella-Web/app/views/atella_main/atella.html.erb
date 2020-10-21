@@ -20,9 +20,11 @@
             <%- unless redisDataPretty.nil? %>
               <%- redisDataPretty.gsub!('\\', '') %>
             <%- end %>
-            <details>
+            <details open>
               <summary>Vector</summary>
-              <pre><%= redisDataPretty %></pre>
+              <div>
+              <pre id=<%="#{m.hostname}_content"%>><%= redisDataPretty %></pre>
+              </div>
             </details>
           </div>
           <div class="divTableCell">
