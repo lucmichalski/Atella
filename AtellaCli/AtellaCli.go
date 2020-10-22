@@ -137,18 +137,18 @@ func Command() {
 		if updateVersion != "" {
 			for {
 				masterAddr := strings.Split(
-					conf.MasterServers.Hosts[AtellaConfig.CurrentMasterServerIndex], " ")
+					conf.MasterServers.Hosts[conf.CurrentMasterServerIndex], " ")
 				masterconn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:5223",
 					masterAddr[0]), time.Duration(conf.Agent.NetTimeout)*time.Second)
 				if err != nil {
-					AtellaConfig.CurrentMasterServerIndex =
-						AtellaConfig.CurrentMasterServerIndex + 1
-					AtellaConfig.CurrentMasterServerIndex =
-						AtellaConfig.CurrentMasterServerIndex %
+					conf.CurrentMasterServerIndex =
+						conf.CurrentMasterServerIndex + 1
+					conf.CurrentMasterServerIndex =
+						conf.CurrentMasterServerIndex %
 							len(conf.MasterServers.Hosts)
 				} else {
 					masterconn.Close()
-					masterServerIndex = AtellaConfig.CurrentMasterServerIndex
+					masterServerIndex = conf.CurrentMasterServerIndex
 					AtellaLogger.LogSystem(fmt.Sprintf("%s using for upgrade",
 						masterAddr[0]))
 					cmd := exec.Command(fmt.Sprintf("%s/atella-updater.sh",
@@ -162,7 +162,7 @@ func Command() {
 					}
 					break
 				}
-				if AtellaConfig.CurrentMasterServerIndex == masterServerIndex {
+				if conf.CurrentMasterServerIndex == masterServerIndex {
 					AtellaLogger.LogError("Could not connect to any of masters")
 					break
 				}

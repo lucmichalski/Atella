@@ -32,16 +32,12 @@ type ServerClient struct {
 
 // Server parameters
 type server struct {
-	address string
-	port    int16
-	config  *tls.Config
+	address       string
+	port          int16
+	configuration *AtellaConfig.Config
+	global        uint64
+	tlsConfig     *tls.Config
 }
-
-var (
-	global                   uint64               = 0
-	conf                     *AtellaConfig.Config = nil
-	currentMasterServerIndex int                  = 0
-)
 
 // Read client data from channel
 func (c *ServerClient) listen() {
@@ -82,12 +78,12 @@ func (c *ServerClient) Close() error {
 
 func (s *server) OnNewClient(c *ServerClient) {
 	AtellaLogger.LogInfo(fmt.Sprintf("New connect [%d], can talk with him - %t",
-		global, c.params.canTalk))
+		s.global, c.params.canTalk))
 	// Logical splitting clients by pseudo-unique id
-	c.params.id = global
-	global = global + 1
-	if global == math.MaxInt64 {
-		global = 0
+	c.params.id = s.global
+	s.global = s.global + 1
+	if s.global == math.MaxInt64 {
+		s.global = 0
 	}
 	c.params.currentClientHostname = ""
 	c.params.currentClientVectorJson = ""
@@ -109,11 +105,11 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 	case "export":
 		if len(msgMap) > 1 {
 			if msgMap[1] == "vector" {
-				c.Send(fmt.Sprintf("ackvector %s\n", AtellaConfig.GetJsonVector()))
-				AtellaConfig.PrintJsonVector()
+				c.Send(fmt.Sprintf("ackvector %s\n", s.configuration.GetJsonVector()))
+				s.configuration.PrintJsonVector()
 			} else if msgMap[1] == "master" {
-				c.Send(fmt.Sprintf("ackmaster %s\n", AtellaConfig.GetJsonMasterVector()))
-				AtellaConfig.PrintJsonMasterVector()
+				c.Send(fmt.Sprintf("ackmaster %s\n", s.configuration.GetJsonMasterVector()))
+				s.configuration.PrintJsonMasterVector()
 			}
 		}
 	case "ping":
@@ -130,7 +126,7 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 				c.Send(fmt.Sprintf("ackhost %s\n", c.params.currentClientHostname))
 			}
 		case "hostname":
-			c.Send(fmt.Sprintf("ackhostname %s\n", conf.Agent.Hostname))
+			c.Send(fmt.Sprintf("ackhostname %s\n", s.configuration.Agent.Hostname))
 		case "version":
 			c.Send(fmt.Sprintf("ackversion %s\n", AtellaConfig.Version))
 		case "help":
@@ -171,16 +167,16 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 					c.params.currentClientVectorJson != "" {
 					var vec []AtellaConfig.VectorType
 					json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
-					AtellaConfig.MasterVectorMutex.Lock()
-					AtellaConfig.MasterVector[c.params.currentClientHostname] = vec
-					AtellaConfig.MasterVectorMutex.Unlock()
+					s.configuration.MasterVectorMutex.Lock()
+					s.configuration.MasterVector[c.params.currentClientHostname] = vec
+					s.configuration.MasterVectorMutex.Unlock()
 				}
 			}
 		default:
 			AtellaLogger.LogWarning(fmt.Sprintf("Unknown cmd %s [%s]\n",
 				msgMap[0], msg))
 		}
-	} else if msg == conf.Security.Code {
+	} else if msg == s.configuration.Security.Code {
 		AtellaLogger.LogInfo(fmt.Sprintf("Server receive [%s], set canTalk -> true",
 			msg))
 		c.Send("canTalk\n")
@@ -205,10 +201,10 @@ func (c *ServerClient) help() {
 func (s *server) Listen() {
 	var listener net.Listener
 	var err error
-	if s.config == nil {
+	if s.tlsConfig == nil {
 		listener, err = net.Listen("tcp", s.address)
 	} else {
-		listener, err = tls.Listen("tcp", s.address, s.config)
+		listener, err = tls.Listen("tcp", s.address, s.tlsConfig)
 	}
 	if err != nil {
 		AtellaLogger.LogFatal(fmt.Sprintf("Error starting TCP server. %s", err))
@@ -227,34 +223,34 @@ func (s *server) Listen() {
 }
 
 func New(c *AtellaConfig.Config, address string) *server {
-	conf = c
 	AtellaLogger.LogSystem(fmt.Sprintf("Init server side with address %s",
 		address))
 	server := &server{
-		address: address,
-		config:  nil}
+		address:       address,
+		tlsConfig:     nil,
+		configuration: c}
 	return server
 }
 
 func (s *server) MasterServer() {
-	if conf.Agent.Master {
+	if s.configuration.Agent.Master {
 		AtellaLogger.LogSystem("I'm master server")
 	}
 
-	AtellaConfig.MasterVectorMutex.Lock()
-	AtellaConfig.MasterVector = make(map[string][]AtellaConfig.VectorType, 0)
-	AtellaConfig.MasterVectorMutex.Unlock()
+	s.configuration.MasterVectorMutex.Lock()
+	s.configuration.MasterVector = make(map[string][]AtellaConfig.VectorType, 0)
+	s.configuration.MasterVectorMutex.Unlock()
 	for {
-		time.Sleep(time.Duration(conf.Agent.Interval) * time.Second)
+		time.Sleep(time.Duration(s.configuration.Agent.Interval) * time.Second)
 		s.insertVector()
 	}
 }
 
-func (c *server) insertVector() error {
+func (s *server) insertVector() error {
 
 	count, _ := AtellaDatabase.SelectQuery(fmt.Sprintf(
 		"SELECT * FROM vector WHERE master='%s'",
-		conf.Agent.Hostname))
+		s.configuration.Agent.Hostname))
 	if count > 0 {
 
 	}

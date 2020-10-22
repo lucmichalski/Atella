@@ -38,11 +38,6 @@ var (
 		`"`, `\"`,
 		`\`, `\\`,
 	)
-	Pid                      int                     = 0
-	Vector                   []VectorType            = make([]VectorType, 0)
-	MasterVector             map[string][]VectorType = make(map[string][]VectorType, 0)
-	MasterVectorMutex                                = sync.RWMutex{}
-	CurrentMasterServerIndex int                     = 0
 
 	GitCommit     string = "unknown"
 	GoVersion     string = "unknown"
@@ -95,6 +90,11 @@ type SectorConfig struct {
 	Hosts []string `json:"hosts"`
 }
 
+type reporter struct {
+	mux      sync.Mutex
+	isLocked bool
+}
+
 type Config struct {
 	Agent         *AtellaConfig              `json:"AgentSection"`
 	Security      *SecurityConfig            `json:"SecuritySection"`
@@ -102,6 +102,12 @@ type Config struct {
 	Sectors       []*SectorsConfig           `json:"SectorsSection"`
 	DB            *DatabaseConfig            `json:"DatabaseSection"`
 	MasterServers *MasterServersConfig       `json:"MasterServersSection"`
+  reporter	reporter
+	Pid           int
+	Vector        []VectorType
+	MasterVector  map[string][]VectorType
+	MasterVectorMutex sync.RWMutex
+	CurrentMasterServerIndex int
 }
 
 func NewConfig() *Config {
@@ -124,16 +130,32 @@ func NewConfig() *Config {
 		DB: &DatabaseConfig{},
 		MasterServers: &MasterServersConfig{
 			Hosts: make([]string, 0)},
-		Channels: make(map[string]*ChannelsConfig),
-		Sectors:  make([]*SectorsConfig, 0)}
+		Channels:                 make(map[string]*ChannelsConfig),
+		Sectors:                  make([]*SectorsConfig, 0),
+		Pid:                      0,
+		Vector:                   make([]VectorType, 0),
+		MasterVector:             make(map[string][]VectorType, 0),
+		MasterVectorMutex:        sync.RWMutex{},
+		CurrentMasterServerIndex: 0}
 
 	return local
+}
+
+// Function retur vector element in vector array if element exist.
+// Else return nil
+func (c *Config) GetVectorByHost(host string) (*VectorType, int) {
+	for i := 0; i < len(c.Vector); i = i + 1 {
+		if c.Vector[i].Host == host {
+			return &c.Vector[i], i
+		}
+	}
+	return nil, -1
 }
 
 // Function save procces ID to file, specifyied as pidFilePath.
 func (c *Config) SavePid() {
 	var err error
-	Pid = os.Getpid()
+	c.Pid = os.Getpid()
 
 	_, err = os.Stat(c.Agent.PidFile)
 	if os.IsNotExist(err) {
@@ -187,9 +209,9 @@ func (c *Config) SavePid() {
 	defer procFile.Close()
 	defer pidFile.Close()
 	name := strings.Split(os.Args[0], "/")
-	pidFile.WriteString(fmt.Sprintf("%d", Pid))
+	pidFile.WriteString(fmt.Sprintf("%d", c.Pid))
 	procFile.WriteString(fmt.Sprintf("%s", name[len(name)-1]))
-	AtellaLogger.LogSystem(fmt.Sprintf("Running with PID %d\n", Pid))
+	AtellaLogger.LogSystem(fmt.Sprintf("Running with PID %d\n", c.Pid))
 }
 
 // Function get procces ID from file, specifyied as pidFilePath.
@@ -261,28 +283,28 @@ func (c *Config) GetJsonConfig() []byte {
 }
 
 // Function print Vector as json format
-func PrintJsonVector() {
-	res := GetJsonVector()
+func (c *Config) PrintJsonVector() {
+	res := c.GetJsonVector()
 	AtellaLogger.LogSystem(fmt.Sprintf("Vector %s", string(res)))
 }
 
 // Function return Vector as json format
-func GetJsonVector() []byte {
-	res, _ := json.Marshal(Vector)
+func (c *Config) GetJsonVector() []byte {
+	res, _ := json.Marshal(c.Vector)
 	return res
 }
 
 // Function print MasterVector as json format
-func PrintJsonMasterVector() {
-	res := GetJsonMasterVector()
+func (c *Config) PrintJsonMasterVector() {
+	res := c.GetJsonMasterVector()
 	AtellaLogger.LogSystem(fmt.Sprintf("Master Vector %s", string(res)))
 }
 
 // Function return MasterVector as json format
-func GetJsonMasterVector() []byte {
-	MasterVectorMutex.RLock()
-	res, _ := json.Marshal(MasterVector)
-	MasterVectorMutex.RUnlock()
+func (c *Config) GetJsonMasterVector() []byte {
+	c.MasterVectorMutex.RLock()
+	res, _ := json.Marshal(c.MasterVector)
+	c.MasterVectorMutex.RUnlock()
 
 	return res
 }

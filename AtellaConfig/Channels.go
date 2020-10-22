@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"../AtellaLogger"
@@ -28,14 +27,8 @@ type msg struct {
 	Message string `json:"message"`
 }
 
-type Reporter struct {
-	mux      sync.Mutex
-	isLocked bool
-}
-
 var (
 	defaultChannels []string = []string{"tgsibnet", "mail"}
-	reporter                 = new(Reporter)
 )
 
 // Function return a pseudo-random generated hex-string.
@@ -52,7 +45,7 @@ func RandomHex(n int64) (string, error) {
 func (conf *Config) Init() {
 	var rp interface{}
 	AtellaLogger.Init(conf.Agent.LogLevel, conf.Agent.LogFile)
-	reporter.isLocked = false
+	conf.reporter.isLocked = false
 	for i := range conf.Channels {
 		rp = conf.Channels[i].Config
 		switch conf.Channels[i].Channel {
@@ -85,12 +78,12 @@ func (conf *Config) Send() {
 		res     bool   = true
 		m       msg
 	)
-	if reporter.isLocked {
+	if conf.reporter.isLocked {
 		AtellaLogger.LogInfo("Sender iteration already in progress")
 		return
 	}
-	reporter.mux.Lock()
-	reporter.isLocked = true
+	conf.reporter.mux.Lock()
+	conf.reporter.isLocked = true
 	AtellaLogger.LogInfo("Start sender iteration")
 	files, err := ioutil.ReadDir(conf.Agent.MessagePath)
 	if err != nil {
@@ -150,8 +143,8 @@ func (conf *Config) Send() {
 			}
 		}
 	}
-	reporter.mux.Unlock()
-	reporter.isLocked = false
+	conf.reporter.mux.Unlock()
+	conf.reporter.isLocked = false
 }
 
 // Function save report as a file (filename are random hex string).
