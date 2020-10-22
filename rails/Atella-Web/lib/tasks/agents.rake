@@ -20,7 +20,7 @@ namespace :agents do
     hosts.each do |h|
       res = h.wrap_version(securityConfig["security"]["code"])
       h.save if res
-      print("#{h.address} #{h.hostname}\n")
+      STDERR.print("#{h.address} #{h.hostname}\n")
     end
   end
 
@@ -32,7 +32,7 @@ namespace :agents do
     redisVectors = Array.new
     statuses = Hash.new
     if masters.nil?
-      print "Not enouth masters!"
+      STDERR.print "Not enouth masters!"
     end
     masters.each do |m|
       _r = redis.get(m.hostname)
@@ -41,7 +41,7 @@ namespace :agents do
     redisVectors.each do |v|
       _s = JSON.parse(v)
       s = _s["status"]
-      print "#{s}\n"
+      STDERR.print "#{s}\n"
     end
   end
 
