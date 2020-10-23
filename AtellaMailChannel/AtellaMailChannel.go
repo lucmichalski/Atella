@@ -3,11 +3,8 @@ package AtellaMailChannel
 import (
 	"crypto/tls"
 	"fmt"
-	"regexp"
 
 	"gopkg.in/gomail.v2"
-
-	"../AtellaLogger"
 )
 
 // Mail message format.
@@ -30,143 +27,27 @@ type AtellaMailConfig struct {
 	NetTimeout int
 }
 
-// Mail Channel configuration.
-type mailConfig struct {
-	address    string
-	port       int16
-	auth       bool
-	username   string
-	password   string
-	from       string
-	to         []string
-	configured bool
-	disabled   bool
-	netTimeout int
-}
-
-var (
-	// Global config for Mail Channel.
-	configAtellaMailChannel = newAtellaMailConfig()
-)
-
-// Function initialize Mail Report Channel.
-func AtellaMailInit(c AtellaMailConfig, hostname string) {
-	setMailHost(c.Address)
-	setMailPort(c.Port)
-	setMailAuth(c.Auth)
-	setMailUsername(c.Username)
-	setMailPassword(c.Password)
-	setMailFrom(c.From)
-	setMailTo(c.To)
-	setMailDisabled(c.Disabled)
-	setMailTimeout(c.NetTimeout)
-	setAtellaMailConfigured()
-
-	re := regexp.MustCompile(`@hostname$`)
-	configAtellaMailChannel.from = re.ReplaceAllString(
-		configAtellaMailChannel.from, fmt.Sprintf("@%s", hostname))
-	AtellaLogger.LogInfo(fmt.Sprintf(
-		"Init Mail Channel with params: [address: %s | port: %d]",
-		c.Address, c.Port))
-}
-
-// Function set net timeout.
-func setMailTimeout(timeout int) {
-	configAtellaMailChannel.netTimeout = timeout
-}
-
-// Function set channel status.
-func setMailDisabled(disabled bool) {
-	configAtellaMailChannel.disabled = disabled
-}
-
-// Function set port for connection.
-func setMailPort(port int16) {
-	if port != 0 {
-		configAtellaMailChannel.port = port
-	}
-}
-
-// Function set ip-address(host) for connection.
-func setMailHost(host string) {
-	if host != "" {
-		configAtellaMailChannel.address = host
-	}
-}
-
-// Function set from field for connection.
-func setMailFrom(from string) {
-	if from != "" {
-		configAtellaMailChannel.from = from
-	}
-}
-
-// Function set to field for connection.
-func setMailTo(to []string) {
-	if to != nil {
-		configAtellaMailChannel.to = to
-	}
-}
-
-// Function set username for connection.
-func setMailUsername(username string) {
-	if username != "" {
-		configAtellaMailChannel.username = username
-	}
-}
-
-// Function set auth for connection.
-func setMailAuth(auth bool) {
-	configAtellaMailChannel.auth = auth
-}
-
-// Function set password for connection.
-func setMailPassword(password string) {
-	configAtellaMailChannel.password = password
-}
-
-// Function set channel is configured.
-func setAtellaMailConfigured() {
-	configAtellaMailChannel.configured = true
-}
-
-func newAtellaMailConfig() *mailConfig {
-	local := new(mailConfig)
-	local.address = "localhost"
-	local.port = 25
-	local.auth = false
-	local.username = "user"
-	local.password = "password"
-	local.from = "atella@hostname"
-	local.configured = false
-	local.disabled = false
-	return local
-}
-
 // Function create message for Mail Channel.
-func newMailMessage() *mailMessage {
+func (config *AtellaMailConfig) newMailMessage() *mailMessage {
 	local := new(mailMessage)
-	local.Emails = configAtellaMailChannel.to
+	local.Emails = config.To
 	local.Text = ""
 	return local
 }
 
-func AtellaMailSendMessage(text string, hostname string) (bool, error) {
-	if configAtellaMailChannel.disabled {
+func (config *AtellaMailConfig) SendMessage(text string, hostname string) (bool, error) {
+	if config.Disabled {
 		return false, nil
 	}
-	if !configAtellaMailChannel.configured {
-		return false, fmt.Errorf("Mail is not conigured!")
-	}
-	if configAtellaMailChannel.to == nil {
+	if config.To == nil || len(config.To) < 1 {
 		return false, fmt.Errorf("Mail users list are empty")
 	}
-	msg := newMailMessage()
+	msg := config.newMailMessage()
 	msg.Subject = fmt.Sprintf("Message from Atella at %s",
 		hostname)
 	msg.Text = text
-	msg.Emails = configAtellaMailChannel.to
-	err := sendMessage(*msg)
+	msg.Emails = config.To
+	err := config.sendMessage(*msg)
 	if err != nil {
 		return false, err
 	}
@@ -175,7 +56,7 @@ func AtellaMailSendMessage(text string, hostname string) (bool, error) {
 
 // Function send message (text) via Mail Channel to user's emails , specifying
 // in Emails array. It is not exportable function
-func sendMessage(msg mailMessage) error {
+func (config *AtellaMailConfig) sendMessage(msg mailMessage) error {
 	var (
 		emails string = ""
 		err    error  = nil
@@ -193,12 +74,12 @@ func sendMessage(msg mailMessage) error {
 		}
 	}
 	m := gomail.NewMessage()
-	m.SetHeader("From", configAtellaMailChannel.from)
+	m.SetHeader("From", config.From)
 	m.SetHeader("To", emails)
 	m.SetHeader("Subject", msg.Subject)
 	m.SetBody("text/html", msg.Text)
 
-	d = dialer()
+	d = config.dialer()
 	conn, err = d.Dial()
 	if err != nil {
 		return err
@@ -210,12 +91,11 @@ func sendMessage(msg mailMessage) error {
 	return nil
 }
 
-func dialer() (d *gomail.Dialer) {
-	c := configAtellaMailChannel
-	if c.username == "" {
-		d = &gomail.Dialer{Host: c.address, Port: int(c.port)}
+func (config *AtellaMailConfig) dialer() (d *gomail.Dialer) {
+	if config.Username == "" {
+		d = &gomail.Dialer{Host: config.Address, Port: int(config.Port)}
 	} else {
-		d = gomail.NewPlainDialer(c.address, int(c.port), c.username, c.password)
+		d = gomail.NewPlainDialer(config.Address, int(config.Port), config.Username, config.Password)
 	}
 
 	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}

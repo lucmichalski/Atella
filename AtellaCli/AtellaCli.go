@@ -73,8 +73,6 @@ func initFlags() {
 		"Version for update")
 	flag.Parse()
 
-	AtellaLogger.LogSystem(fmt.Sprintf("Started %s version %s",
-		Service, Version))
 	if printVersion {
 		fmt.Println("Atella")
 		fmt.Println("Version:", Version)
@@ -87,7 +85,8 @@ func initFlags() {
 		conf := AtellaConfig.NewConfig()
 		err := conf.LoadConfig(configFilePath)
 		if err != nil {
-			AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+			logger := AtellaLogger.New(4, "stderr")
+			logger.LogFatal(fmt.Sprintf("%s", err))
 		}
 		fmt.Println(conf.Agent.PidFile)
 		os.Exit(0)
@@ -101,12 +100,17 @@ func Command() {
 	conf = AtellaConfig.NewConfig()
 	err = conf.LoadConfig(configFilePath)
 	if err != nil {
-		AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+		logger := AtellaLogger.New(4, "stderr")
+		logger.LogFatal(fmt.Sprintf("%s", err))
 	}
 	err = conf.LoadDirectory(configDirPath)
 	if err != nil {
-		AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+		logger := AtellaLogger.New(4, "stderr")
+		logger.LogFatal(fmt.Sprintf("%s", err))
 	}
+
+	conf.Logger.LogSystem(fmt.Sprintf("Started %s version %s",
+		Service, Version))
 
 	switch strings.ToLower(cmd) {
 	case "report":
@@ -117,7 +121,7 @@ func Command() {
 		case "custom":
 			conf.Report(msg, target)
 		default:
-			AtellaLogger.LogError(fmt.Sprintf("Unknown report type: %s", reportType))
+			conf.Logger.LogError(fmt.Sprintf("Unknown report type: %s", reportType))
 		}
 		os.Exit(0)
 	case "send":
@@ -149,7 +153,7 @@ func Command() {
 				} else {
 					masterconn.Close()
 					masterServerIndex = conf.CurrentMasterServerIndex
-					AtellaLogger.LogSystem(fmt.Sprintf("%s using for upgrade",
+					conf.Logger.LogSystem(fmt.Sprintf("%s using for upgrade",
 						masterAddr[0]))
 					cmd := exec.Command(fmt.Sprintf("%s/atella-updater.sh",
 						ScriptsPrefix),
@@ -157,22 +161,22 @@ func Command() {
 						fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys)
 					err = cmd.Start()
 					if err != nil {
-						AtellaLogger.LogError("Failed exec cli for update")
-						AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+						conf.Logger.LogError("Failed exec cli for update")
+						conf.Logger.LogFatal(fmt.Sprintf("%s", err))
 					}
 					break
 				}
 				if conf.CurrentMasterServerIndex == masterServerIndex {
-					AtellaLogger.LogError("Could not connect to any of masters")
+					conf.Logger.LogError("Could not connect to any of masters")
 					break
 				}
 			}
 		} else {
-			AtellaLogger.LogError("Version not specifyed")
+			conf.Logger.LogError("Version not specifyed")
 		}
 	case "rotate":
 	default:
-		AtellaLogger.LogError(fmt.Sprintf("Unknown command: %s", cmd))
+		conf.Logger.LogError(fmt.Sprintf("Unknown command: %s", cmd))
 	}
 }
 
