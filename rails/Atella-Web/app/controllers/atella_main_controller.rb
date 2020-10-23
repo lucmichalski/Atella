@@ -13,12 +13,21 @@ class AtellaMainController < ApplicationController
     if @error.nil?
       @redis = Redis.new(host: @settings["atella"]["redisHost"])
       @masters = Host.where(:is_master => true)
+      
+      if @masters.nil?
+        return
+      end
       @masters.each do |m|
         vector = wrap_master_host(m.address, m.hostname, securityConfig)
-        redisVector = @redis.get(m.hostname)
-        unless vector.eql?(redisVector)
-          @redis.set(m.hostname, vector)
+        vector = processVector(vector)
+        unless @redis.nil?
+          redisVector = @redis.get(m.hostname)
+        else
+          redisVector = "{}"
         end
+        # unless vector.eql?(redisVector)
+        #   @redis.set(m.hostname, vector)
+        # end
       end
     end
   end
@@ -40,6 +49,19 @@ class AtellaMainController < ApplicationController
     @debPkgDir = Dir["#{pkgDir}deb/*.deb"].sort
     @rpmPkgDir = Dir["#{pkgDir}rpm/*.rpm"].sort
     @tarPkgDir = Dir["#{pkgDir}tar/*.tar*"].sort
+  end
+  
+  def pkg_post
+    act = params[:act]
+    pkg = params[:pkg]
+    pkgDir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["packagesDirectory"]}"
+    post = params["Delete"]
+    case act
+    when "delete"
+      f = "#{pkgDir}#{pkg}/#{post}"
+      File.delete(f) if File.exist?(f)
+    end
+    redirect_to pkg_path
   end
 
   def cfg

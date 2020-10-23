@@ -13,14 +13,19 @@
           <div class="divTableCell">
             <%= m.hostname %>
           </div>
-          <div class="divTableCell">
+          <div class="divTableCell" style="text-align: left;">
             <%# <%= @redis.get(m.hostname) %>
-            <%- redisData = @redis.get("r9odt-pc") %>
+            <%- redisData = @redis.get(m.hostname) %>
             <%- redisDataPretty = JSON.pretty_generate(JSON.parse(redisData)) %>
             <%- unless redisDataPretty.nil? %>
               <%- redisDataPretty.gsub!('\\', '') %>
             <%- end %>
-            <%= redisDataPretty %>
+            <details open>
+              <summary>Vector</summary>
+              <div>
+              <pre id=<%="#{m.hostname}_content"%>><%= redisDataPretty %></pre>
+              </div>
+            </details>
           </div>
           <div class="divTableCell">
             <%= m.version %>

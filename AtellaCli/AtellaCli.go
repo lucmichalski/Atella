@@ -73,8 +73,6 @@ func initFlags() {
 		"Version for update")
 	flag.Parse()
 
-	AtellaLogger.LogSystem(fmt.Sprintf("Started %s version %s",
-		Service, Version))
 	if printVersion {
 		fmt.Println("Atella")
 		fmt.Println("Version:", Version)
@@ -87,25 +85,32 @@ func initFlags() {
 		conf := AtellaConfig.NewConfig()
 		err := conf.LoadConfig(configFilePath)
 		if err != nil {
-			AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+			logger := AtellaLogger.New(4, "stderr")
+			logger.LogFatal(fmt.Sprintf("%s", err))
 		}
 		fmt.Println(conf.Agent.PidFile)
 		os.Exit(0)
 	}
 }
 
+// Parsing and processing control commands
 func Command() {
 	var err error = nil
 	initFlags()
 	conf = AtellaConfig.NewConfig()
 	err = conf.LoadConfig(configFilePath)
 	if err != nil {
-		AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+		logger := AtellaLogger.New(4, "stderr")
+		logger.LogFatal(fmt.Sprintf("%s", err))
 	}
 	err = conf.LoadDirectory(configDirPath)
 	if err != nil {
-		AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+		logger := AtellaLogger.New(4, "stderr")
+		logger.LogFatal(fmt.Sprintf("%s", err))
 	}
+
+	conf.Logger.LogSystem(fmt.Sprintf("Started %s version %s",
+		Service, Version))
 
 	switch strings.ToLower(cmd) {
 	case "report":
@@ -116,7 +121,7 @@ func Command() {
 		case "custom":
 			conf.Report(msg, target)
 		default:
-			AtellaLogger.LogError(fmt.Sprintf("Unknown report type: %s", reportType))
+			conf.Logger.LogError(fmt.Sprintf("Unknown report type: %s", reportType))
 		}
 		os.Exit(0)
 	case "send":
@@ -136,19 +141,19 @@ func Command() {
 		if updateVersion != "" {
 			for {
 				masterAddr := strings.Split(
-					conf.MasterServers.Hosts[AtellaConfig.CurrentMasterServerIndex], " ")
+					conf.MasterServers.Hosts[conf.CurrentMasterServerIndex], " ")
 				masterconn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:5223",
 					masterAddr[0]), time.Duration(conf.Agent.NetTimeout)*time.Second)
 				if err != nil {
-					AtellaConfig.CurrentMasterServerIndex =
-						AtellaConfig.CurrentMasterServerIndex + 1
-					AtellaConfig.CurrentMasterServerIndex =
-						AtellaConfig.CurrentMasterServerIndex %
+					conf.CurrentMasterServerIndex =
+						conf.CurrentMasterServerIndex + 1
+					conf.CurrentMasterServerIndex =
+						conf.CurrentMasterServerIndex %
 							len(conf.MasterServers.Hosts)
 				} else {
 					masterconn.Close()
-					masterServerIndex = AtellaConfig.CurrentMasterServerIndex
-					AtellaLogger.LogSystem(fmt.Sprintf("%s using for upgrade",
+					masterServerIndex = conf.CurrentMasterServerIndex
+					conf.Logger.LogSystem(fmt.Sprintf("%s using for upgrade",
 						masterAddr[0]))
 					cmd := exec.Command(fmt.Sprintf("%s/atella-updater.sh",
 						ScriptsPrefix),
@@ -156,29 +161,22 @@ func Command() {
 						fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys)
 					err = cmd.Start()
 					if err != nil {
-						AtellaLogger.LogError("Failed exec cli for update")
-						AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+						conf.Logger.LogError("Failed exec cli for update")
+						conf.Logger.LogFatal(fmt.Sprintf("%s", err))
 					}
 					break
 				}
-				if AtellaConfig.CurrentMasterServerIndex == masterServerIndex {
-					AtellaLogger.LogError("Could not connect to any of masters")
+				if conf.CurrentMasterServerIndex == masterServerIndex {
+					conf.Logger.LogError("Could not connect to any of masters")
 					break
 				}
 			}
-
-			// err := syscall.Exec(fmt.Sprintf("%s/atella-updater.sh",
-			// 	AtellaConfig.BinPrefix),
-			// 	[]string{fmt.Sprintf("%s/atella-cli",
-			// 		AtellaConfig.BinPrefix), "master.atella.local",
-			// 		fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys},
-			// 	os.Environ())
 		} else {
-			AtellaLogger.LogError("Version not specifyed")
+			conf.Logger.LogError("Version not specifyed")
 		}
 	case "rotate":
 	default:
-		AtellaLogger.LogError(fmt.Sprintf("Unknown command: %s", cmd))
+		conf.Logger.LogError(fmt.Sprintf("Unknown command: %s", cmd))
 	}
 }
 

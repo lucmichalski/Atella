@@ -33,7 +33,7 @@ VERSION_RELEASE := ${GIT_TAG}.${GIT_COMMIT}
 all: build
 
 .PHONY: build 
-build: testbuild
+build: 
 	for s in `ls ${SRC_PATH}`; do \
 		CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} $(CC) -a -installsuffix cgo -ldflags "-X main.ScriptPrefix=${SCRIPTS_PATH} -X main.BinPrefix=${BINPREFIX} -X main.Sys=${SYS} -X main.Version=${VERSION_RELEASE} -X main.GoVersion=${GO_VERSION} -X main.GitCommit=${GIT_HASH}" -o ${BIN_PATH}/"$$s"_"${OS}"_"${ARCH}" ${CFLAGS} ${SRC_PATH}/$$s/$$s.go; \
 	done
@@ -46,7 +46,7 @@ testbuild:
 
 .PHONY: tar-deb
 tar-deb:
-	make build SYS=deb
+	# make build SYS=deb
 	rm -rf build/root
 	mkdir -p build/root/${SERVICE}${BINPREFIX} 
 	mkdir -p build/root/${SERVICE}/etc/
@@ -59,7 +59,7 @@ tar-deb:
 	cp pkg/atella.service build/root/${SERVICE}${SCRIPTS_PATH}/
 	cp pkg/init.sh build/root/${SERVICE}${SCRIPTS_PATH}/
 	cp pkg/atella.logrotate build/root/${SERVICE}${SCRIPTS_PATH}/
-	tar -czvPf pkg/tar/${SERVICE}-${VERSION_RELEASE}.tar.gz -C build/root/${SERVICE} . 	
+	tar -czvPf pkg/tar/${SERVICE}-${GIT_TAG}.tar.gz -C build/root/${SERVICE} . 	
 
 .PHONY: docker-pkgbuilder-64
 docker-pkgbuilder-64:
@@ -76,7 +76,7 @@ deb-64: tar-deb docker-pkgbuilder-64
 	-e URL=${URL} \
 	-e LICENSE=${LICENSE} \
 	-e SERVICE=${SERVICE} \
-	-e VERSION_RELEASE=${VERSION_RELEASE} \
+	-e VERSION_RELEASE=${GIT_TAG} \
 	${SERVICE}-deb-pkgbuilder-64
 
 .PHONY: clean 

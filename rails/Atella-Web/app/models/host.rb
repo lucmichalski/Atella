@@ -30,7 +30,7 @@ class Host < ApplicationRecord
         end
         s.close
       rescue => v
-        STDERR.print("#{v}\n")
+        STDERR.print("Error: #{v}\n")
         res = false
       end
     end

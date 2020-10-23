@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"../AtellaConfig"
-	"../AtellaLogger"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -17,11 +16,11 @@ var (
 func Init(c *AtellaConfig.Config) {
 	conf = c
 	if conf.DB.Type != "" {
-		AtellaLogger.LogInfo(fmt.Sprintf("Init db with [%s:%s@%s:%d/%s]",
+		c.Logger.LogInfo(fmt.Sprintf("Init db with [%s:%s@%s:%d/%s]",
 			conf.DB.User, conf.DB.Password, conf.DB.Host,
 			conf.DB.Port, conf.DB.Dbname))
 	} else {
-		AtellaLogger.LogWarning("Database section not defined")
+		c.Logger.LogWarning("Database section not defined")
 	}
 }
 
@@ -31,11 +30,11 @@ func Reload(c *AtellaConfig.Config) {
 	}
 	conf = c
 	if conf.DB.Type != "" {
-		AtellaLogger.LogInfo(fmt.Sprintf("Reload db with [%s:%s@%s:%d/%s",
+		c.Logger.LogInfo(fmt.Sprintf("Reload db with [%s:%s@%s:%d/%s",
 			conf.DB.User, conf.DB.Password, conf.DB.Host,
 			conf.DB.Port, conf.DB.Dbname))
 	} else {
-		AtellaLogger.LogWarning("Database section not defined")
+		c.Logger.LogWarning("Database section not defined")
 	}
 }
 
@@ -50,7 +49,7 @@ func Connect() {
 			conf.DB.Port, conf.DB.Dbname))
 	}
 	if err != nil {
-		AtellaLogger.LogError(fmt.Sprintf("%s", err))
+		// AtellaLogger.LogError(fmt.Sprintf("%s", err))
 		base = nil
 	}
 }

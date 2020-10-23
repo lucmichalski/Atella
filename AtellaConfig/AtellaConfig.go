@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"syscall"
 
 	"../AtellaLogger"
 	"../AtellaMailChannel"
@@ -22,10 +23,12 @@ import (
 )
 
 type VectorType struct {
-	Host     string   `json:"host"`
-	Hostname string   `json:"hostname"`
-	Status   bool     `json:"status"`
-	Sectors  []string `json:"sectors"`
+	Host      string   `json:"host"`
+	Hostname  string   `json:"hostname"`
+	Status    bool     `json:"status"`
+	Interval  int64    `json:"interval"`
+	Timestamp int64    `json:"timestamp"`
+	Sectors   []string `json:"sectors"`
 }
 
 var (
@@ -36,11 +39,6 @@ var (
 		`"`, `\"`,
 		`\`, `\\`,
 	)
-	Pid                      int                     = 0
-	Vector                   []VectorType            = make([]VectorType, 0)
-	MasterVector             map[string][]VectorType = make(map[string][]VectorType, 0)
-	MasterVectorMutex                                = sync.RWMutex{}
-	CurrentMasterServerIndex int                     = 0
 
 	GitCommit     string = "unknown"
 	GoVersion     string = "unknown"
@@ -93,13 +91,25 @@ type SectorConfig struct {
 	Hosts []string `json:"hosts"`
 }
 
+type reporter struct {
+	mux      sync.Mutex
+	isLocked bool
+}
+
 type Config struct {
-	Agent         *AtellaConfig              `json:"AgentSection"`
-	Security      *SecurityConfig            `json:"SecuritySection"`
-	Channels      map[string]*ChannelsConfig `json:"ChannelsSection"`
-	Sectors       []*SectorsConfig           `json:"SectorsSection"`
-	DB            *DatabaseConfig            `json:"DatabaseSection"`
-	MasterServers *MasterServersConfig       `json:"MasterServersSection"`
+	Agent                    *AtellaConfig              `json:"AgentSection"`
+	Security                 *SecurityConfig            `json:"SecuritySection"`
+	Channels                 map[string]*ChannelsConfig `json:"ChannelsSection"`
+	Sectors                  []*SectorsConfig           `json:"SectorsSection"`
+	DB                       *DatabaseConfig            `json:"DatabaseSection"`
+	MasterServers            *MasterServersConfig       `json:"MasterServersSection"`
+	reporter                 reporter
+	Logger                   *AtellaLogger.AtellaLogger
+	Pid                      int
+	Vector                   []VectorType
+	MasterVector             map[string][]VectorType
+	MasterVectorMutex        sync.RWMutex
+	CurrentMasterServerIndex int
 }
 
 func NewConfig() *Config {
@@ -122,16 +132,33 @@ func NewConfig() *Config {
 		DB: &DatabaseConfig{},
 		MasterServers: &MasterServersConfig{
 			Hosts: make([]string, 0)},
-		Channels: make(map[string]*ChannelsConfig),
-		Sectors:  make([]*SectorsConfig, 0)}
+		Channels:                 make(map[string]*ChannelsConfig),
+		Sectors:                  make([]*SectorsConfig, 0),
+		Logger:                   AtellaLogger.New(4, "stderr"),
+		Pid:                      0,
+		Vector:                   make([]VectorType, 0),
+		MasterVector:             make(map[string][]VectorType, 0),
+		MasterVectorMutex:        sync.RWMutex{},
+		CurrentMasterServerIndex: 0}
 
 	return local
+}
+
+// Function retur vector element in vector array if element exist.
+// Else return nil
+func (c *Config) GetVectorByHost(host string) (*VectorType, int) {
+	for i := 0; i < len(c.Vector); i = i + 1 {
+		if c.Vector[i].Host == host {
+			return &c.Vector[i], i
+		}
+	}
+	return nil, -1
 }
 
 // Function save procces ID to file, specifyied as pidFilePath.
 func (c *Config) SavePid() {
 	var err error
-	Pid = os.Getpid()
+	c.Pid = os.Getpid()
 
 	_, err = os.Stat(c.Agent.PidFile)
 	if os.IsNotExist(err) {
@@ -174,20 +201,20 @@ func (c *Config) SavePid() {
 	pidFile, err := os.OpenFile(c.Agent.PidFile,
 		os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
-		AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+		c.Logger.LogFatal(fmt.Sprintf("%s", err))
 	}
 
 	procFile, err := os.OpenFile(c.Agent.ProcFile,
 		os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
-		AtellaLogger.LogFatal(fmt.Sprintf("%s", err))
+		c.Logger.LogFatal(fmt.Sprintf("%s", err))
 	}
 	defer procFile.Close()
 	defer pidFile.Close()
 	name := strings.Split(os.Args[0], "/")
-	pidFile.WriteString(fmt.Sprintf("%d", Pid))
+	pidFile.WriteString(fmt.Sprintf("%d", c.Pid))
 	procFile.WriteString(fmt.Sprintf("%s", name[len(name)-1]))
-	AtellaLogger.LogSystem(fmt.Sprintf("Running with PID %d\n", Pid))
+	c.Logger.LogSystem(fmt.Sprintf("Running with PID %d\n", c.Pid))
 }
 
 // Function get procces ID from file, specifyied as pidFilePath.
@@ -198,48 +225,48 @@ func (c *Config) GetPid() int {
 	var err error = nil
 	file, err := os.Open(c.Agent.PidFile)
 	if err != nil {
-		AtellaLogger.LogError(fmt.Sprintf("%s", err))
+		c.Logger.LogError(fmt.Sprintf("%s", err))
 		return -1
 	}
 	defer file.Close()
 	bytes, err := fmt.Fscanf(file, "%d", &pid)
 	if err != nil && err != io.EOF || bytes < 1 {
-		AtellaLogger.LogError(fmt.Sprintf("%s [bytes : %d|file : %s]", err, bytes,
+		c.Logger.LogError(fmt.Sprintf("%s [bytes : %d|file : %s]", err, bytes,
 			file.Name()))
 		return -1
 	}
 	procFile, err := os.Open(c.Agent.ProcFile)
 	if err != nil {
-		AtellaLogger.LogError(fmt.Sprintf("%s", err))
+		c.Logger.LogError(fmt.Sprintf("%s", err))
 		return -1
 	}
 	defer procFile.Close()
 	bytes, err = fmt.Fscanf(procFile, "%s", &name)
 	if err != nil && err != io.EOF || bytes < 1 {
-		AtellaLogger.LogError(fmt.Sprintf("%s [bytes : %d|file : %s]", err, bytes,
+		c.Logger.LogError(fmt.Sprintf("%s [bytes : %d|file : %s]", err, bytes,
 			file.Name()))
 		return -1
 	}
 
 	cmdFile, err := os.Open(fmt.Sprintf("/proc/%d/cmdline", pid))
 	if err != nil {
-		AtellaLogger.LogError(fmt.Sprintf("%s", err))
+		c.Logger.LogError(fmt.Sprintf("%s", err))
 		return -1
 	}
 	defer cmdFile.Close()
 	bytes, err = fmt.Fscanf(cmdFile, "%s", &cmdLine)
 	if err != nil && err != io.EOF || bytes < 1 {
-		AtellaLogger.LogError(fmt.Sprintf("%s [bytes : %d|file : %s]", err, bytes,
+		c.Logger.LogError(fmt.Sprintf("%s [bytes : %d|file : %s]", err, bytes,
 			cmdFile.Name()))
 		return -1
 	}
-	AtellaLogger.LogSystem(fmt.Sprintf("Find PID %d. His command - %s\n",
+	c.Logger.LogSystem(fmt.Sprintf("Find PID %d. His command - %s\n",
 		pid, cmdLine))
 	cmdLineArray := strings.Split(cmdLine, "/")
 	cmd := cmdLineArray[len(cmdLineArray)-1]
 	cmd = cmd[:len(cmd)-1]
 	if cmd != name {
-		AtellaLogger.LogError(fmt.Sprintf(
+		c.Logger.LogError(fmt.Sprintf(
 			"PID not map into agent [%s %s]", cmd, name))
 		return -1
 	}
@@ -249,7 +276,7 @@ func (c *Config) GetPid() int {
 // Function print Config as json format
 func (c *Config) PrintJsonConfig() {
 	config_json := c.GetJsonConfig()
-	AtellaLogger.LogSystem(string(config_json))
+	c.Logger.LogSystem(string(config_json))
 }
 
 // Function return Config as json format
@@ -259,28 +286,28 @@ func (c *Config) GetJsonConfig() []byte {
 }
 
 // Function print Vector as json format
-func PrintJsonVector() {
-	res := GetJsonVector()
-	AtellaLogger.LogSystem(fmt.Sprintf("Vector %s", string(res)))
+func (c *Config) PrintJsonVector() {
+	res := c.GetJsonVector()
+	c.Logger.LogSystem(fmt.Sprintf("Vector %s", string(res)))
 }
 
 // Function return Vector as json format
-func GetJsonVector() []byte {
-	res, _ := json.Marshal(Vector)
+func (c *Config) GetJsonVector() []byte {
+	res, _ := json.Marshal(c.Vector)
 	return res
 }
 
 // Function print MasterVector as json format
-func PrintJsonMasterVector() {
-	res := GetJsonMasterVector()
-	AtellaLogger.LogSystem(fmt.Sprintf("Master Vector %s", string(res)))
+func (c *Config) PrintJsonMasterVector() {
+	res := c.GetJsonMasterVector()
+	c.Logger.LogSystem(fmt.Sprintf("Master Vector %s", string(res)))
 }
 
 // Function return MasterVector as json format
-func GetJsonMasterVector() []byte {
-	MasterVectorMutex.RLock()
-	res, _ := json.Marshal(MasterVector)
-	MasterVectorMutex.RUnlock()
+func (c *Config) GetJsonMasterVector() []byte {
+	c.MasterVectorMutex.RLock()
+	res, _ := json.Marshal(c.MasterVector)
+	c.MasterVectorMutex.RUnlock()
 
 	return res
 }
@@ -289,13 +316,13 @@ func GetJsonMasterVector() []byte {
 func (c *Config) LoadDirectory(path string) error {
 	var err error = nil
 	if path == "" {
-		if path, err = getDefaultConfigDir(); err != nil {
+		if path, err = c.getDefaultConfigDir(); err != nil {
 			return err
 		}
 	}
 	walkfn := func(thispath string, info os.FileInfo, _ error) error {
 		if info == nil {
-			AtellaLogger.LogWarning(fmt.Sprintf("I don't have permissions to read %s",
+			c.Logger.LogWarning(fmt.Sprintf("I don't have permissions to read %s",
 				thispath))
 			return nil
 		}
@@ -321,14 +348,14 @@ func (c *Config) LoadDirectory(path string) error {
 }
 
 // Function return default config path if it exist
-func getDefaultConfigPath() (string, error) {
+func (c *Config) getDefaultConfigPath() (string, error) {
 	envfile := os.Getenv("ATELLA_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.atella/atella.conf")
 	etcfile := "/etc/atella/atella.conf"
 
 	for _, path := range []string{envfile, homefile, etcfile} {
 		if _, err := os.Stat(path); err == nil {
-			AtellaLogger.LogSystem(fmt.Sprintf("Using config file: %s", path))
+			c.Logger.LogSystem(fmt.Sprintf("Using config file: %s", path))
 			return path, nil
 		}
 	}
@@ -338,14 +365,14 @@ func getDefaultConfigPath() (string, error) {
 }
 
 // Function return default config dir if it exist
-func getDefaultConfigDir() (string, error) {
+func (c *Config) getDefaultConfigDir() (string, error) {
 	envdir := os.Getenv("ATELLA_CONFIG_DIR")
 	homedir := os.ExpandEnv("${HOME}/.atella/conf.d")
 	etcdir := "/etc/atella/conf.d"
 
 	for _, path := range []string{envdir, homedir, etcdir} {
 		if _, err := os.Stat(path); err == nil {
-			AtellaLogger.LogSystem(fmt.Sprintf("Using config directory: %s", path))
+			c.Logger.LogSystem(fmt.Sprintf("Using config directory: %s", path))
 			return path, nil
 		}
 	}
@@ -358,7 +385,7 @@ func getDefaultConfigDir() (string, error) {
 func (c *Config) LoadConfig(path string) error {
 	var err error
 	if path == "" {
-		if path, err = getDefaultConfigPath(); err != nil {
+		if path, err = c.getDefaultConfigPath(); err != nil {
 			return err
 		}
 	}
@@ -469,7 +496,8 @@ func (c *Config) LoadConfig(path string) error {
 
 	_, err = os.Stat(c.Agent.MessagePath)
 	if os.IsNotExist(err) {
-		os.MkdirAll(c.Agent.MessagePath, os.ModePerm)
+		syscall.Umask(0)
+		os.MkdirAll(c.Agent.MessagePath, 00770|syscall.S_ISGID)
 	}
 	return nil
 }
@@ -482,10 +510,23 @@ func (c *Config) addChannel(name string, table *ast.Table) error {
 	switch name {
 	case "TgSibnet":
 		rp.Config = &AtellaTgSibnetChannel.AtellaTgSibnetConfig{
+			Address: "localhost",
+			Port: 1,
+			Protocol: "tcp",
+			To: make([]string, 0),
+			Disabled: false,
 			NetTimeout: c.Agent.NetTimeout}
 
 	case "Mail":
 		rp.Config = &AtellaMailChannel.AtellaMailConfig{
+			Address: "localhost",
+			Port: 25,
+			Auth: false,
+			Username: "user",
+			Password: "password",
+			From: "atella@hostname",
+			To: make([]string, 0),
+			Disabled: false,
 			NetTimeout: c.Agent.NetTimeout}
 
 	default:

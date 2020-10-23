@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"../AtellaConfig"
-	"../AtellaLogger"
 )
 
 var (
@@ -21,11 +20,11 @@ var (
 )
 
 type ServerClient struct {
-	conn       net.Conn
-	masterconn net.Conn
-	conf       *AtellaConfig.Config
-	neighbours []string
-	sectors    []int64
+	conn          net.Conn
+	masterconn    net.Conn
+	configuration *AtellaConfig.Config
+	neighbours    []string
+	sectors       []int64
 }
 
 func (c *ServerClient) Send(message string) error {
@@ -46,6 +45,9 @@ func (c *ServerClient) Close() error {
 	return c.conn.Close()
 }
 
+func (c *ServerClient) runNeighbour(addr string) {
+}
+
 // Run client
 func (c *ServerClient) Run() {
 	var (
@@ -63,42 +65,38 @@ func (c *ServerClient) Run() {
 
 	for {
 		if len(c.neighbours) < 1 {
-			AtellaLogger.LogInfo("No neighbours")
+			c.configuration.Logger.LogInfo("No neighbours")
 			StopReply = true
 		} else {
 			currentNeighboursAddrs = strings.Split(c.neighbours[currentNeighboursInd],
 				",")
 			for _, currentNeighboursAddr = range currentNeighboursAddrs {
 				if currentNeighboursInd == 0 {
-					err = c.SendToMaster(fmt.Sprintf("set %s %s\n", c.conf.Agent.Hostname,
-						AtellaConfig.GetJsonVector()))
+					err = c.SendToMaster(fmt.Sprintf("set %s %s\n", c.configuration.Agent.Hostname,
+						c.configuration.GetJsonVector()))
 					if err != nil {
-						AtellaLogger.LogError(fmt.Sprintf("%s", err))
+						c.configuration.Logger.LogError(fmt.Sprintf("%s", err))
 					}
 				}
 				if !StopRequest {
 					c.conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s:5223",
 						currentNeighboursAddr),
-						time.Duration(c.conf.Agent.NetTimeout)*time.Second)
-					vectorIndex := getVectorIndexByHost(currentNeighboursAddr)
-					if vectorIndex >= 0 {
-						vec = AtellaConfig.Vector[vectorIndex]
-					} else {
-						vec = AtellaConfig.VectorType{}
-						vec.Host = currentNeighboursAddr
-						vec.Status = false
-					}
+						time.Duration(c.configuration.Agent.NetTimeout)*time.Second)
+					_, vectorIndex := c.configuration.GetVectorByHost(currentNeighboursAddr)
+					vec = c.configuration.Vector[vectorIndex]
 					if err != nil {
-						AtellaLogger.LogWarning(fmt.Sprintf("%s", err))
+						c.configuration.Logger.LogWarning(fmt.Sprintf("%s", err))
 						vec.Status = false
+						vec.Timestamp = time.Now().Unix()
+						c.configuration.Vector[vectorIndex] = vec
 					} else {
 						exit = false
 						connbuf := bufio.NewReader(c.conn)
-						err = c.Send(fmt.Sprintf("%s\n", c.conf.Security.Code))
+						err = c.Send(fmt.Sprintf("%s\n", c.configuration.Security.Code))
 						if err != nil {
 							status = false
 							exit = true
-							AtellaLogger.LogError(fmt.Sprintf("%s", err))
+							c.configuration.Logger.LogError(fmt.Sprintf("%s", err))
 						}
 						for {
 							message, err := connbuf.ReadString('\n')
@@ -106,7 +104,7 @@ func (c *ServerClient) Run() {
 								if err != io.EOF {
 									status = false
 									exit = true
-									AtellaLogger.LogError(fmt.Sprintf("%s", err))
+									c.configuration.Logger.LogError(fmt.Sprintf("%s", err))
 								}
 							}
 							if exit {
@@ -114,9 +112,10 @@ func (c *ServerClient) Run() {
 								vec.Status = status
 								vec.Hostname = hostname
 								if vectorIndex < 0 {
-									AtellaConfig.Vector = append(AtellaConfig.Vector, vec)
+									c.configuration.Vector = append(c.configuration.Vector, vec)
 								} else {
-									AtellaConfig.Vector[vectorIndex] = vec
+									vec.Timestamp = time.Now().Unix()
+									c.configuration.Vector[vectorIndex] = vec
 								}
 								break
 							}
@@ -124,31 +123,31 @@ func (c *ServerClient) Run() {
 							msg = strings.TrimRight(message, "\r\n")
 							msgMap = strings.Split(msg, " ")
 
-							AtellaLogger.LogInfo(fmt.Sprintf("Client receive [%s]", msg))
+							c.configuration.Logger.LogInfo(fmt.Sprintf("Client receive [%s]", msg))
 							switch msgMap[0] {
 							case "canTalk":
 								err = c.Send("hostname\n")
 								if err != nil {
 									status = false
 									exit = true
-									AtellaLogger.LogError(fmt.Sprintf("%s", err))
+									c.configuration.Logger.LogError(fmt.Sprintf("%s", err))
 								}
 							case "ackhostname":
 								if len(msgMap) < 2 {
 									exit = true
 								} else {
 									hostname = msgMap[1]
-									err = c.Send(fmt.Sprintf("host %s\n", c.conf.Agent.Hostname))
+									err = c.Send(fmt.Sprintf("host %s\n", c.configuration.Agent.Hostname))
 									if err != nil {
 										exit = true
-										AtellaLogger.LogError(fmt.Sprintf("%s", err))
+										c.configuration.Logger.LogError(fmt.Sprintf("%s", err))
 									}
 								}
 							case "ackhost":
 								if len(msgMap) < 2 {
 									exit = true
 								} else {
-									if msgMap[1] == c.conf.Agent.Hostname {
+									if msgMap[1] == c.configuration.Agent.Hostname {
 										status = true
 									} else {
 										status = false
@@ -156,7 +155,7 @@ func (c *ServerClient) Run() {
 									err = c.Send("exit\n")
 									if err != nil {
 										exit = true
-										AtellaLogger.LogError(fmt.Sprintf("%s", err))
+										c.configuration.Logger.LogError(fmt.Sprintf("%s", err))
 									}
 								}
 							case "Bye!":
@@ -166,7 +165,7 @@ func (c *ServerClient) Run() {
 					}
 				} else {
 					StopReply = true
-					AtellaLogger.LogSystem("Client ready for reload")
+					c.configuration.Logger.LogSystem("Client ready for reload")
 				}
 			}
 			currentNeighboursInd = (currentNeighboursInd + 1) %
@@ -184,60 +183,60 @@ func New(c *AtellaConfig.Config) *ServerClient {
 	return client
 }
 
-func (client *ServerClient) init(c *AtellaConfig.Config) {
-	client.conn = nil
-	client.conf = c
-	client.neighbours = make([]string, 0)
-	client.sectors = make([]int64, 0)
-	AtellaConfig.Vector = make([]AtellaConfig.VectorType, 0)
+func (c *ServerClient) init(config *AtellaConfig.Config) {
+	c.conn = nil
+	c.configuration = config
+	c.neighbours = make([]string, 0)
+	c.sectors = make([]int64, 0)
+	c.configuration.Vector = make([]AtellaConfig.VectorType, 0)
 
-	if len(client.conf.MasterServers.Hosts) < 1 {
-		AtellaConfig.CurrentMasterServerIndex = -1
-		AtellaLogger.LogWarning(fmt.Sprintf("Master servers not specifiyed!"))
-	} else if !client.conf.Agent.Master {
-		masterServerIndex = rand.Int() % len(client.conf.MasterServers.Hosts)
-		AtellaConfig.CurrentMasterServerIndex = 0
-		AtellaLogger.LogSystem(fmt.Sprintf("Use [%s] as master server",
-			client.conf.MasterServers.Hosts[masterServerIndex]))
+	if len(c.configuration.MasterServers.Hosts) < 1 {
+		c.configuration.CurrentMasterServerIndex = -1
+		c.configuration.Logger.LogWarning(fmt.Sprintf("Master servers not specifiyed!"))
+	} else if !c.configuration.Agent.Master {
+		masterServerIndex = rand.Int() % len(c.configuration.MasterServers.Hosts)
+		c.configuration.CurrentMasterServerIndex = 0
+		c.configuration.Logger.LogSystem(fmt.Sprintf("Use [%s] as master server",
+			c.configuration.MasterServers.Hosts[masterServerIndex]))
 	}
 
-	client.GetSector()
-	AtellaLogger.LogSystem("Init client side")
+	c.GetSector()
+	c.configuration.Logger.LogSystem("Init client side")
 }
 
 func (client *ServerClient) Reload(c *AtellaConfig.Config) {
-	AtellaLogger.LogSystem("Client request reload")
+	client.configuration.Logger.LogSystem("Client request reload")
 	StopRequest = true
 	for !StopReply {
 	}
 	client.init(c)
 	StopReply = false
 	StopRequest = false
-	AtellaLogger.LogSystem("Client reloaded")
+	client.configuration.Logger.LogSystem("Client reloaded")
 }
 
 // Function find and return sector index
 func (c *ServerClient) GetSector() {
 	var (
 		sector     []int64 = []int64{}
-		sectorsCnt         = len(c.conf.Sectors)
+		sectorsCnt         = len(c.configuration.Sectors)
 	)
 	for i := 0; i < sectorsCnt; i = i + 1 {
-		hostsCnt := len(c.conf.Sectors[i].Config.Hosts)
+		hostsCnt := len(c.configuration.Sectors[i].Config.Hosts)
 		for j := 0; j < hostsCnt; j = j + 1 {
-			hosts := strings.Split(c.conf.Sectors[i].Config.Hosts[j], " ")
-			if elExists(hosts, c.conf.Agent.Hostname) {
+			hosts := strings.Split(c.configuration.Sectors[i].Config.Hosts[j], " ")
+			if elExists(hosts, c.configuration.Agent.Hostname) {
 				sector = append(sector, int64(i))
-				AtellaLogger.LogInfo(fmt.Sprintf("Sector: %s [%d]",
-					c.conf.Sectors[i].Sector, i))
-				for l := 1; int64(l) <= c.conf.Agent.HostCnt; l = l + 1 {
-					hosts_next := strings.Split(c.conf.Sectors[i].Config.Hosts[(j+l)%
+				c.configuration.Logger.LogInfo(fmt.Sprintf("Sector: %s [%d]",
+					c.configuration.Sectors[i].Sector, i))
+				for l := 1; int64(l) <= c.configuration.Agent.HostCnt; l = l + 1 {
+					hosts_next := strings.Split(c.configuration.Sectors[i].Config.Hosts[(j+l)%
 						hostsCnt], " ")
 					hosts_prev := strings.Split(
-						c.conf.Sectors[i].Config.Hosts[(j-l+hostsCnt)%hostsCnt], " ")
-					if !elExists(hosts_next, c.conf.Agent.Hostname) {
-						c.AddHost(hosts_next[0], c.conf.Sectors[i].Sector)
-						c.AddHost(hosts_prev[0], c.conf.Sectors[i].Sector)
+						c.configuration.Sectors[i].Config.Hosts[(j-l+hostsCnt)%hostsCnt], " ")
+					if !elExists(hosts_next, c.configuration.Agent.Hostname) {
+						c.AddHost(hosts_next[0], c.configuration.Sectors[i].Sector)
+						c.AddHost(hosts_prev[0], c.configuration.Sectors[i].Sector)
 					}
 				}
 			}
@@ -251,37 +250,42 @@ func (c *ServerClient) AddHost(host string, sector string) {
 	var vec AtellaConfig.VectorType
 	hosts := strings.Split(host, ",")
 	for _, h := range hosts {
-		index := getVectorIndexByHost(h)
+		_, index := c.configuration.GetVectorByHost(h)
 		if !elExists(c.neighbours, h) {
 			c.neighbours = append(c.neighbours, h)
 			if index < 0 {
 				vec = AtellaConfig.VectorType{
-					Host:     h,
-					Hostname: "unknown",
-					Status:   false,
-					Sectors:  make([]string, 0)}
+					Host:      h,
+					Hostname:  "unknown",
+					Status:    false,
+					Interval:  c.configuration.Agent.Interval,
+					Timestamp: -1,
+					Sectors:   make([]string, 0)}
 			} else {
-				vec = AtellaConfig.Vector[index]
+				vec = c.configuration.Vector[index]
 			}
 			if !elExists(vec.Sectors, sector) {
 				vec.Sectors = append(vec.Sectors,
 					sector)
 			}
 			if index < 0 {
-				AtellaConfig.Vector = append(AtellaConfig.Vector, vec)
+				vec.Timestamp = time.Now().Unix()
+				c.configuration.Vector = append(c.configuration.Vector, vec)
 			} else {
-				AtellaConfig.Vector[index] = vec
+				vec.Timestamp = time.Now().Unix()
+				c.configuration.Vector[index] = vec
 			}
-			AtellaLogger.LogInfo(fmt.Sprintf("Added host [%s]",
+			c.configuration.Logger.LogInfo(fmt.Sprintf("Added host [%s]",
 				h))
 		} else {
-			vec = AtellaConfig.Vector[index]
+			vec = c.configuration.Vector[index]
 			if !elExists(vec.Sectors, sector) {
 				vec.Sectors = append(vec.Sectors,
 					sector)
 			}
-			AtellaConfig.Vector[index] = vec
-			AtellaLogger.LogInfo(fmt.Sprintf("Added sector [%s] for host [%s]",
+			vec.Timestamp = time.Now().Unix()
+			c.configuration.Vector[index] = vec
+			c.configuration.Logger.LogInfo(fmt.Sprintf("Added sector [%s] for host [%s]",
 				sector, h))
 		}
 	}
@@ -300,48 +304,38 @@ func elExists(array []string, item string) bool {
 // Function send vector to one of master servers
 func (c *ServerClient) SendToMaster(query string) error {
 	var err error = nil
-	if c.conf.Agent.Master {
+	if c.configuration.Agent.Master {
 		var vec []AtellaConfig.VectorType
-		json.Unmarshal(AtellaConfig.GetJsonVector(), &vec)
-		AtellaConfig.MasterVector[c.conf.Agent.Hostname] = vec
+		json.Unmarshal(c.configuration.GetJsonVector(), &vec)
+		c.configuration.MasterVector[c.configuration.Agent.Hostname] = vec
 		return nil
 	}
-	if AtellaConfig.CurrentMasterServerIndex < 0 {
+	if c.configuration.CurrentMasterServerIndex < 0 {
 		return fmt.Errorf("Master servers not specifiyed")
 	}
 	for {
 		masterAddr := strings.Split(
-			c.conf.MasterServers.Hosts[AtellaConfig.CurrentMasterServerIndex], " ")
+			c.configuration.MasterServers.Hosts[c.configuration.CurrentMasterServerIndex], " ")
 		c.masterconn, err = net.DialTimeout("tcp", fmt.Sprintf("%s:5223",
-			masterAddr[0]), time.Duration(c.conf.Agent.NetTimeout)*time.Second)
+			masterAddr[0]), time.Duration(c.configuration.Agent.NetTimeout)*time.Second)
 		if err != nil {
-			AtellaConfig.CurrentMasterServerIndex =
-				AtellaConfig.CurrentMasterServerIndex + 1
-			AtellaConfig.CurrentMasterServerIndex =
-				AtellaConfig.CurrentMasterServerIndex %
-					len(c.conf.MasterServers.Hosts)
+			c.configuration.CurrentMasterServerIndex =
+				c.configuration.CurrentMasterServerIndex + 1
+			c.configuration.CurrentMasterServerIndex =
+				c.configuration.CurrentMasterServerIndex %
+					len(c.configuration.MasterServers.Hosts)
 		} else {
 			_, err = c.masterconn.Write(
-				[]byte(fmt.Sprintf("%s\n", c.conf.Security.Code)))
+				[]byte(fmt.Sprintf("%s\n", c.configuration.Security.Code)))
 			_, err = c.masterconn.Write([]byte(query))
 			c.masterconn.Close()
-			masterServerIndex = AtellaConfig.CurrentMasterServerIndex
+			masterServerIndex = c.configuration.CurrentMasterServerIndex
 			break
 		}
-		if AtellaConfig.CurrentMasterServerIndex == masterServerIndex {
+		if c.configuration.CurrentMasterServerIndex == masterServerIndex {
 			return fmt.Errorf("Could not connect to any of masters")
 		}
 	}
 
 	return err
-}
-
-// Function retur index in vector array if element exist. Else return -1
-func getVectorIndexByHost(host string) int {
-	for i := 0; i < len(AtellaConfig.Vector); i = i + 1 {
-		if AtellaConfig.Vector[i].Host == host {
-			return i
-		}
-	}
-	return -1
 }

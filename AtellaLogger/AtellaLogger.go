@@ -2,46 +2,50 @@ package AtellaLogger
 
 import "log"
 
-var (
-	logLevel int64  = 4
-	logFile  string = "stdout"
-)
-
-func Init(level int64, file string) {
-	setLogLevel(level)
-	setLogFile(file)
+type AtellaLogger struct {
+	logLevel int64
+	logFile  string
 }
 
-func setLogLevel(level int64) {
-	logLevel = level
+func New(level int64, file string) *AtellaLogger {
+	return &AtellaLogger{}
 }
 
-func setLogFile(file string) {
-	logFile = file
+func (logger *AtellaLogger) Init(level int64, file string) {
+	logger.setLogLevel(level)
+	logger.setLogFile(file)
 }
 
-func LogFatal(s string) {
+func (logger *AtellaLogger) setLogLevel(level int64) {
+	logger.logLevel = level
+}
+
+func (logger *AtellaLogger) setLogFile(file string) {
+	logger.logFile = file
+}
+
+func (logger *AtellaLogger) LogFatal(s string) {
 	log.Fatalf("[FATAL]: %s", s)
 }
 
-func LogSystem(s string) {
+func (logger *AtellaLogger) LogSystem(s string) {
 	log.Printf("[SYS]: %s", s)
 }
 
-func LogError(s string) {
-	if logLevel > 1 {
+func (logger *AtellaLogger) LogError(s string) {
+	if logger.logLevel > 1 {
 		log.Printf("[ERROR]: %s", s)
 	}
 }
 
-func LogWarning(s string) {
-	if logLevel > 2 {
+func (logger *AtellaLogger) LogWarning(s string) {
+	if logger.logLevel > 2 {
 		log.Printf("[WARN]: %s", s)
 	}
 }
 
-func LogInfo(s string) {
-	if logLevel > 3 {
+func (logger *AtellaLogger) LogInfo(s string) {
+	if logger.logLevel > 3 {
 		log.Printf("[INFO]: %s", s)
 	}
 }

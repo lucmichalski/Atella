@@ -92,7 +92,7 @@ services:
     env_file:
       - ./atella_mariadb.env
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     networks:
       network_1:
         ipv4_address: 10.2.0.7
@@ -104,7 +104,7 @@ services:
     env_file:
       - ./atella_redis.env
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     networks:
       network_1:
         ipv4_address: 10.2.0.8
