@@ -137,9 +137,5 @@ func main() {
 	client = AtellaClient.New(conf)
 	go client.Run()
 
-	go conf.Sender()
-
-	for {
-		time.Sleep(time.Minute)
-	}
+	conf.Sender()
 }

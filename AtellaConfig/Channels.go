@@ -75,7 +75,7 @@ func (conf *Config) Init() {
 func (conf *Config) Sender() {
 	for {
 		conf.Send()
-		time.Sleep(2 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 }
 
