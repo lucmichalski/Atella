@@ -41,23 +41,7 @@
         </div>
         <main class="main">
           <div id="web">
-            <%- unless @atella["agent"]["master"] %>
-              <div class="divTable error-table">
-                <div class="divTableHeading">
-                  <div class="divTableRow">
-                    <div class="divTableHead">
-                      <h2>
-                        <b>
-                          Web interface works only on master server. Sorry :(
-                        </b>
-                      </h2>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            <%- else %>
-              <%= yield %>
-            <%- end %>
+            <%= yield %>
           </div>
         </main>
         <footer class="foot-main">

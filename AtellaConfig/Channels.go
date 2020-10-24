@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"../AtellaMailChannel"
+	"../AtellaTgSibnetChannel"
 )
 
 // Abstract Channels configuration.
@@ -53,18 +54,16 @@ func (conf *Config) Init() {
 		switch conf.Channels[i].Channel {
 		case "TgSibnet":
 			conf.Logger.LogInfo(fmt.Sprintf(
-				"Init TgSibnet Channel with params: [address: %s | port: %d]",
-				"addr", 0))
-			// AtellaTgSibnetChannel.AtellaTgSibnetInit(
-			// 	*rp.(*AtellaTgSibnetChannel.AtellaTgSibnetConfig))
+				"Init TgSibnet Channel with params: %v",
+				(*rp.(*AtellaTgSibnetChannel.AtellaTgSibnetConfig))))
 		case "Mail":
 			re := regexp.MustCompile(`@hostname$`)
 			(*rp.(*AtellaMailChannel.AtellaMailConfig)).From = re.ReplaceAllString(
 				(*rp.(*AtellaMailChannel.AtellaMailConfig)).From,
 				fmt.Sprintf("@%s", conf.Agent.Hostname))
 			conf.Logger.LogInfo(fmt.Sprintf(
-				"Init Mail Channel with params: [address: %s | port: %d]",
-				"addr", 0))
+				"Init Mail Channel with params: %v",
+				(*rp.(*AtellaMailChannel.AtellaMailConfig))))
 		default:
 			conf.Logger.LogWarning(fmt.Sprintf("Unknown channel %s",
 				conf.Channels[i].Channel))
@@ -75,7 +74,7 @@ func (conf *Config) Init() {
 func (conf *Config) Sender() {
 	for {
 		conf.Send()
-		time.Sleep(2 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 }
 
