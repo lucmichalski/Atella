@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
-	"time"
 
 	"../../AtellaClient"
 	"../../AtellaConfig"
