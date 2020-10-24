@@ -161,6 +161,7 @@ func (c *Config) SavePid() {
 	c.Pid = os.Getpid()
 
 	_, err = os.Stat(c.Agent.PidFile)
+	// Creating path to pid file if it not exist
 	if os.IsNotExist(err) {
 		path := strings.Split(c.Agent.PidFile, "/")
 		fullpath := "/"
@@ -179,6 +180,7 @@ func (c *Config) SavePid() {
 		}
 	}
 
+	// Creating path to proc file if it not exist
 	_, err = os.Stat(c.Agent.ProcFile)
 	if os.IsNotExist(err) {
 		path := strings.Split(c.Agent.ProcFile, "/")
@@ -198,6 +200,7 @@ func (c *Config) SavePid() {
 		}
 	}
 
+	// Saving pid and proc
 	pidFile, err := os.OpenFile(c.Agent.PidFile,
 		os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
@@ -510,23 +513,23 @@ func (c *Config) addChannel(name string, table *ast.Table) error {
 	switch name {
 	case "TgSibnet":
 		rp.Config = &AtellaTgSibnetChannel.AtellaTgSibnetConfig{
-			Address: "localhost",
-			Port: 1,
-			Protocol: "tcp",
-			To: make([]string, 0),
-			Disabled: false,
+			Address:    "localhost",
+			Port:       1,
+			Protocol:   "tcp",
+			To:         make([]string, 0),
+			Disabled:   false,
 			NetTimeout: c.Agent.NetTimeout}
 
 	case "Mail":
 		rp.Config = &AtellaMailChannel.AtellaMailConfig{
-			Address: "localhost",
-			Port: 25,
-			Auth: false,
-			Username: "user",
-			Password: "password",
-			From: "atella@hostname",
-			To: make([]string, 0),
-			Disabled: false,
+			Address:    "localhost",
+			Port:       25,
+			Auth:       false,
+			Username:   "user",
+			Password:   "password",
+			From:       "atella@hostname",
+			To:         make([]string, 0),
+			Disabled:   false,
 			NetTimeout: c.Agent.NetTimeout}
 
 	default:
