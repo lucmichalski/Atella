@@ -110,6 +110,8 @@ type Config struct {
 	MasterVector             map[string][]VectorType
 	MasterVectorMutex        sync.RWMutex
 	CurrentMasterServerIndex int
+	SenderStopRequest     chan struct{}
+	SenderStopReply     bool
 }
 
 func NewConfig() *Config {
@@ -139,7 +141,9 @@ func NewConfig() *Config {
 		Vector:                   make([]VectorType, 0),
 		MasterVector:             make(map[string][]VectorType, 0),
 		MasterVectorMutex:        sync.RWMutex{},
-		CurrentMasterServerIndex: 0}
+		CurrentMasterServerIndex: 0,
+		SenderStopRequest:     make(chan struct{}),
+		SenderStopReply: false,}
 
 	return local
 }

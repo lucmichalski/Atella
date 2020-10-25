@@ -25,17 +25,19 @@ type clientParams struct {
 // Client description
 type ServerClient struct {
 	conn   net.Conn
-	Server *server
+	Server *AtellaServer
 	params clientParams
 }
 
 // Server parameters
-type server struct {
-	address       string
-	port          int16
-	configuration *AtellaConfig.Config
-	global        uint64
-	tlsConfig     *tls.Config
+type AtellaServer struct {
+	address          string
+	configuration    *AtellaConfig.Config
+	global           uint64
+	tlsConfig        *tls.Config
+	closeRequest     chan struct{}
+	CloseReplyServer bool
+	CloseReplyMaster bool
 }
 
 // Processing client
@@ -80,9 +82,9 @@ func (c *ServerClient) Close() error {
 }
 
 // Processing client connection
-func (s *server) OnNewClient(c *ServerClient) {
-	s.configuration.Logger.LogInfo(fmt.Sprintf("New connect [%d], can talk with him - %t",
-		s.global, c.params.canTalk))
+func (s *AtellaServer) OnNewClient(c *ServerClient) {
+	s.configuration.Logger.LogInfo(fmt.Sprintf("New connect from %s[%d], can talk with him - %t",
+		c.conn.RemoteAddr(), s.global, c.params.canTalk))
 	// Logical splitting clients by pseudo-unique id
 	c.params.id = s.global
 	s.global = s.global + 1
@@ -94,12 +96,12 @@ func (s *server) OnNewClient(c *ServerClient) {
 }
 
 // Processing client disconnection
-func (s *server) OnClientConnectionClosed(c *ServerClient, err error) {
+func (s *AtellaServer) OnClientConnectionClosed(c *ServerClient, err error) {
 	s.configuration.Logger.LogInfo(fmt.Sprintf("Client [%d] go away", c.params.id))
 }
 
 // Processing each message, receiving from clients
-func (s *server) OnNewMessage(c *ServerClient, message string) bool {
+func (s *AtellaServer) OnNewMessage(c *ServerClient, message string) bool {
 	var (
 		msg    = strings.TrimRight(message, "\r\n")
 		msgMap = strings.Split(msg, " ")
@@ -209,13 +211,15 @@ func (c *ServerClient) help() {
 }
 
 // Listen for connections
-func (s *server) Listen() {
-	var listener net.Listener
+func (s *AtellaServer) Listen() {
+	var listener *net.TCPListener
 	var err error
+	address, err := net.ResolveTCPAddr("tcp", s.address)
 	if s.tlsConfig == nil {
-		listener, err = net.Listen("tcp", s.address)
+		listener, err = net.ListenTCP("tcp", address)
 	} else {
-		listener, err = tls.Listen("tcp", s.address, s.tlsConfig)
+		s.configuration.Logger.LogFatal("Tls server are not implemented")
+		// listener, err = tls.ListenTCP("tcp", address, s.tlsConfig)
 	}
 	if err != nil {
 		s.configuration.Logger.LogFatal(fmt.Sprintf("Error starting TCP server. %s", err))
@@ -223,7 +227,23 @@ func (s *server) Listen() {
 	defer listener.Close()
 
 	for {
-		conn, _ := listener.Accept()
+		select {
+		case <-s.closeRequest:
+			s.configuration.Logger.LogSystem("Stopping server")
+			s.CloseReplyServer = true
+			return
+		default:
+		}
+		listener.SetDeadline(time.Now().Add(1e9))
+		conn, err := listener.Accept()
+		if err != nil {
+			if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+				continue
+			}
+			s.configuration.Logger.LogInfo(
+				fmt.Sprintf("Failed to accept connection: %s", err.Error()))
+			continue
+		}
 		client := &ServerClient{
 			conn:   conn,
 			Server: s,
@@ -233,33 +253,52 @@ func (s *server) Listen() {
 	}
 }
 
-// Create new server 
-func New(c *AtellaConfig.Config, address string) *server {
+// Create new server
+func New(c *AtellaConfig.Config, address string) *AtellaServer {
 	c.Logger.LogSystem(fmt.Sprintf("Init server side with address %s",
 		address))
-	server := &server{
-		address:       address,
-		tlsConfig:     nil,
-		configuration: c}
+	server := &AtellaServer{
+		address:          address,
+		tlsConfig:        nil,
+		configuration:    c,
+		closeRequest:     make(chan struct{}),
+		CloseReplyServer: false,
+		CloseReplyMaster: false}
 	return server
 }
 
 // Function impement master server logic
-func (s *server) MasterServer() {
+func (s *AtellaServer) MasterServer() {
 	if s.configuration.Agent.Master {
 		s.configuration.Logger.LogSystem("I'm master server")
+	} else {
+		s.configuration.Logger.LogSystem("I'm not a master server")
+		s.CloseReplyMaster = true
+		return
 	}
 
 	s.configuration.MasterVectorMutex.Lock()
 	s.configuration.MasterVector = make(map[string][]AtellaConfig.VectorType, 0)
 	s.configuration.MasterVectorMutex.Unlock()
 	for {
+		select {
+		case <-s.closeRequest:
+			s.configuration.Logger.LogSystem("Stopping master server")
+			s.CloseReplyMaster = true
+			return
+		default:
+		}
 		time.Sleep(time.Duration(s.configuration.Agent.Interval) * time.Second)
 		s.insertVector()
 	}
 }
 
-func (s *server) insertVector() error {
+// Function for stopping server
+func (s *AtellaServer) Stop() {
+	close(s.closeRequest)
+}
+
+func (s *AtellaServer) insertVector() error {
 
 	count, _ := AtellaDatabase.SelectQuery(fmt.Sprintf(
 		"SELECT * FROM vector WHERE master='%s'",
@@ -270,13 +309,13 @@ func (s *server) insertVector() error {
 	return nil
 }
 
-// func NewWithTLS(address string, certFile string, keyFile string) *server {
+// func NewWithTLS(address string, certFile string, keyFile string) *AtellaServer {
 // 	AtellaLogger.LogInfo(fmt.Sprintf("Init tls server side with address %s", address))
 // 	cert, _ := tls.LoadX509KeyPair(certFile, keyFile)
 // 	config := tls.Config{
 // 		Certificates: []tls.Certificate{cert},
 // 	}
-// 	server := &server{
+// 	server := &AtellaServer{
 // 		address: address,
 // 		config:  &config,
 // 	}

@@ -20,6 +20,7 @@ var (
 	configFilePath string                     = ""
 	configDirPath  string                     = ""
 	client         *AtellaClient.ServerClient = nil
+	server         *AtellaServer.AtellaServer = nil
 	printVersion   bool                       = false
 	GitCommit      string                     = "unknown"
 	GoVersion      string                     = "unknown"
@@ -29,6 +30,7 @@ var (
 	Sys            string                     = "unknown"
 	BinPrefix      string                     = "/usr/bin"
 	ScriptsPrefix  string                     = "/usr/lib/atella/scripts"
+	stop           bool                       = false
 )
 
 // Interrupts handler
@@ -52,6 +54,16 @@ func handle(c chan os.Signal) {
 			AtellaDatabase.Reload(conf)
 			conf.Logger.LogSystem("Reloaded")
 		case "interrupt":
+			if !stop {
+				stop = true
+				server.Stop()
+				client.Stop()
+				conf.StopSender()
+			} else {
+				if conf != nil {
+					conf.Logger.LogSystem("Already in Progress")
+				}
+			}
 			os.Exit(0)
 		case "user defined signal 1":
 			conf.Send()
@@ -118,8 +130,9 @@ func main() {
 	conf.PrintJsonConfig()
 
 	conf.SavePid()
-	AtellaDatabase.Init(conf)
-	AtellaDatabase.Connect()
+
+	// AtellaDatabase.Init(conf)
+	// AtellaDatabase.Connect()
 
 	// Creating signals handler
 	c := make(chan os.Signal, 1)
@@ -131,7 +144,7 @@ func main() {
 	go handle(c)
 	conf.Logger.LogSystem(fmt.Sprintf("Started %s version %s",
 		AtellaConfig.Service, AtellaConfig.Version))
-	server := AtellaServer.New(conf, "0.0.0.0:5223")
+	server = AtellaServer.New(conf, "0.0.0.0:5223")
 	go server.Listen()
 	go server.MasterServer()
 
@@ -139,4 +152,7 @@ func main() {
 	go client.Run()
 
 	conf.Sender()
+	// for !server.CloseReplyServer || !server.CloseReplyMaster ||
+	// 	!client.CloseReply || !conf.SenderStopReply {
+	// }
 }

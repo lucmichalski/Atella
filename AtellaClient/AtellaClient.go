@@ -25,6 +25,8 @@ type ServerClient struct {
 	configuration *AtellaConfig.Config
 	neighbours    []string
 	sectors       []int64
+	closeRequest  chan struct{}
+	CloseReply    bool
 }
 
 // Function send string via connection
@@ -68,6 +70,12 @@ func (c *ServerClient) Run() {
 	)
 
 	for {
+		select {
+		case <-c.closeRequest:
+			c.configuration.Logger.LogSystem("Stopping client")
+			return
+		default:
+		}
 		if len(c.neighbours) < 1 {
 			c.configuration.Logger.LogInfo("No neighbours")
 			StopReply = true
@@ -182,7 +190,9 @@ func (c *ServerClient) Run() {
 
 // New client
 func New(c *AtellaConfig.Config) *ServerClient {
-	client := &ServerClient{}
+	client := &ServerClient{
+		CloseReply:   false,
+		closeRequest: make(chan struct{})}
 	client.init(c)
 	return client
 }
@@ -193,7 +203,7 @@ func (c *ServerClient) init(config *AtellaConfig.Config) {
 	c.neighbours = make([]string, 0)
 	c.sectors = make([]int64, 0)
 	c.configuration.Vector = make([]AtellaConfig.VectorType, 0)
-	
+
 	// Selecting pseudo-random master from config
 	if len(c.configuration.MasterServers.Hosts) < 1 {
 		c.configuration.CurrentMasterServerIndex = -1
@@ -365,4 +375,9 @@ func (c *ServerClient) SendToMaster(query string) error {
 	}
 
 	return err
+}
+
+// Function for stopping client
+func (c *ServerClient) Stop() {
+	close(c.closeRequest)
 }

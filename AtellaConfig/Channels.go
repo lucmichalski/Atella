@@ -71,8 +71,19 @@ func (conf *Config) Init() {
 	}
 }
 
+func (conf *Config) StopSender() {
+	close(conf.SenderStopRequest);
+}
+
 func (conf *Config) Sender() {
 	for {
+		select {
+		case <-conf.SenderStopRequest:
+			conf.Logger.LogSystem("Stopping sender")
+			conf.SenderStopReply = true
+			return
+		default:
+		}
 		conf.Send()
 		time.Sleep(10 * time.Second)
 	}
