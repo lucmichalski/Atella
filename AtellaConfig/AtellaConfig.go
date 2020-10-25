@@ -315,6 +315,65 @@ func (c *Config) GetJsonMasterVector() []byte {
 	return res
 }
 
+
+// Function add channel config into channels section
+func (c *Config) addChannel(name string, table *ast.Table) error {
+	rp := &ChannelsConfig{
+		Channel: name,
+		Config:  nil}
+	switch name {
+	case "TgSibnet":
+		rp.Config = &AtellaTgSibnetChannel.AtellaTgSibnetConfig{
+			Address:    "localhost",
+			Port:       1,
+			Protocol:   "tcp",
+			To:         make([]string, 0),
+			Disabled:   false,
+			NetTimeout: c.Agent.NetTimeout}
+
+	case "Mail":
+		rp.Config = &AtellaMailChannel.AtellaMailConfig{
+			Address:    "localhost",
+			Port:       25,
+			Auth:       false,
+			Username:   "user",
+			Password:   "password",
+			From:       "atella@hostname",
+			To:         make([]string, 0),
+			Disabled:   false,
+			NetTimeout: c.Agent.NetTimeout}
+
+	default:
+		rp.Channel = name
+		rp.Config = nil
+	}
+	if rp.Config != nil {
+		if err := toml.UnmarshalTable(table, rp.Config); err != nil {
+			return fmt.Errorf("Error parsing %s", err)
+		}
+	}
+	c.Channels[name] = rp
+	//	c.Channels = append(c.Channels, rp)
+	return nil
+}
+
+// Function add sector config into sectors section
+func (c *Config) addSector(name string, table *ast.Table) error {
+	rp := &SectorsConfig{
+		Sector: name,
+		Config: &SectorConfig{
+			Hosts: []string{}}}
+
+	if err := toml.UnmarshalTable(table, rp.Config); err != nil {
+		return fmt.Errorf("Error parsing %s", err)
+	}
+	c.Sectors = append(c.Sectors, rp)
+	return nil
+}
+
+// github.com/influxdata/telegraf
+// config
+
 // Function loads configs from directory
 func (c *Config) LoadDirectory(path string) error {
 	var err error = nil
@@ -502,61 +561,6 @@ func (c *Config) LoadConfig(path string) error {
 		syscall.Umask(0)
 		os.MkdirAll(c.Agent.MessagePath, 00770|syscall.S_ISGID)
 	}
-	return nil
-}
-
-// Function add channel config into channels section
-func (c *Config) addChannel(name string, table *ast.Table) error {
-	rp := &ChannelsConfig{
-		Channel: name,
-		Config:  nil}
-	switch name {
-	case "TgSibnet":
-		rp.Config = &AtellaTgSibnetChannel.AtellaTgSibnetConfig{
-			Address:    "localhost",
-			Port:       1,
-			Protocol:   "tcp",
-			To:         make([]string, 0),
-			Disabled:   false,
-			NetTimeout: c.Agent.NetTimeout}
-
-	case "Mail":
-		rp.Config = &AtellaMailChannel.AtellaMailConfig{
-			Address:    "localhost",
-			Port:       25,
-			Auth:       false,
-			Username:   "user",
-			Password:   "password",
-			From:       "atella@hostname",
-			To:         make([]string, 0),
-			Disabled:   false,
-			NetTimeout: c.Agent.NetTimeout}
-
-	default:
-		rp.Channel = name
-		rp.Config = nil
-	}
-	if rp.Config != nil {
-		if err := toml.UnmarshalTable(table, rp.Config); err != nil {
-			return fmt.Errorf("Error parsing %s", err)
-		}
-	}
-	c.Channels[name] = rp
-	//	c.Channels = append(c.Channels, rp)
-	return nil
-}
-
-// Function add sector config into sectors section
-func (c *Config) addSector(name string, table *ast.Table) error {
-	rp := &SectorsConfig{
-		Sector: name,
-		Config: &SectorConfig{
-			Hosts: []string{}}}
-
-	if err := toml.UnmarshalTable(table, rp.Config); err != nil {
-		return fmt.Errorf("Error parsing %s", err)
-	}
-	c.Sectors = append(c.Sectors, rp)
 	return nil
 }
 
