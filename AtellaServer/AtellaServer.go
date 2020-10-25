@@ -38,7 +38,7 @@ type server struct {
 	tlsConfig     *tls.Config
 }
 
-// Read client data from channel
+// Processing client
 func (c *ServerClient) listen() {
 	c.Server.OnNewClient(c)
 	reader := bufio.NewReader(c.conn)
@@ -57,24 +57,29 @@ func (c *ServerClient) listen() {
 	return
 }
 
+// Function send string via connection
 func (c *ServerClient) Send(message string) error {
 	_, err := c.conn.Write([]byte(message))
 	return err
 }
 
+// Function send byte array via connection
 func (c *ServerClient) SendBytes(b []byte) error {
 	_, err := c.conn.Write(b)
 	return err
 }
 
+// Function return connection descriptor
 func (c *ServerClient) Conn() net.Conn {
 	return c.conn
 }
 
+// Function close the connection
 func (c *ServerClient) Close() error {
 	return c.conn.Close()
 }
 
+// Processing client connection
 func (s *server) OnNewClient(c *ServerClient) {
 	s.configuration.Logger.LogInfo(fmt.Sprintf("New connect [%d], can talk with him - %t",
 		s.global, c.params.canTalk))
@@ -88,15 +93,19 @@ func (s *server) OnNewClient(c *ServerClient) {
 	c.params.currentClientVectorJson = ""
 }
 
+// Processing client disconnection
 func (s *server) OnClientConnectionClosed(c *ServerClient, err error) {
 	s.configuration.Logger.LogInfo(fmt.Sprintf("Client [%d] go away", c.params.id))
 }
 
+// Processing each message, receiving from clients
 func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 	var (
 		msg    = strings.TrimRight(message, "\r\n")
 		msgMap = strings.Split(msg, " ")
 	)
+
+	// Commands, dont.t require security check
 	switch msgMap[0] {
 	case "quit", "exit":
 		c.Send(fmt.Sprintf("Bye!\n"))
@@ -114,6 +123,8 @@ func (s *server) OnNewMessage(c *ServerClient, message string) bool {
 	case "ping":
 		c.Send("pong")
 	}
+
+	// Commands, require security check
 	if c.params.canTalk == true {
 		s.configuration.Logger.LogInfo(fmt.Sprintf("Server receive [%s]", msg))
 		switch msgMap[0] {
@@ -197,6 +208,7 @@ func (c *ServerClient) help() {
 	c.Send("exit\n")
 }
 
+// Listen for connections
 func (s *server) Listen() {
 	var listener net.Listener
 	var err error
@@ -221,6 +233,7 @@ func (s *server) Listen() {
 	}
 }
 
+// Create new server 
 func New(c *AtellaConfig.Config, address string) *server {
 	c.Logger.LogSystem(fmt.Sprintf("Init server side with address %s",
 		address))
@@ -231,6 +244,7 @@ func New(c *AtellaConfig.Config, address string) *server {
 	return server
 }
 
+// Function impement master server logic
 func (s *server) MasterServer() {
 	if s.configuration.Agent.Master {
 		s.configuration.Logger.LogSystem("I'm master server")

@@ -137,7 +137,6 @@ func Command() {
 		}
 		os.Exit(0)
 	case "update":
-		// TODO: Create environment for master servers from atella config
 		if updateVersion != "" {
 			for {
 				masterAddr := strings.Split(

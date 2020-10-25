@@ -120,6 +120,8 @@ func main() {
 	conf.SavePid()
 	AtellaDatabase.Init(conf)
 	AtellaDatabase.Connect()
+
+	// Creating signals handler
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP)
 	signal.Notify(c, syscall.SIGINT)
