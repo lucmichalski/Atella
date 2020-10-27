@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"syscall"
 
+	"../../AtellaCli"
 	"../../AtellaClient"
 	"../../AtellaConfig"
 	"../../AtellaDatabase"
@@ -131,6 +132,13 @@ func main() {
 
 	conf.SavePid()
 
+	pkgName := fmt.Sprintf(AtellaCli.PkgTemplate, AtellaConfig.Version, AtellaConfig.Arch, AtellaConfig.Sys)
+	tmpPath := fmt.Sprintf("%s/%s", os.TempDir(), pkgName)
+	_, err = os.Stat(tmpPath)
+	if os.IsExist(err) {
+		conf.Logger.LogSystem(fmt.Sprintf("Deleting package %s", tmpPath))
+		os.Remove(tmpPath)
+	}
 	// AtellaDatabase.Init(conf)
 	// AtellaDatabase.Connect()
 

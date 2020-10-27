@@ -3,7 +3,9 @@ package AtellaCli
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
@@ -34,7 +36,7 @@ var (
 	BinPrefix         string               = "/usr/bin"
 	ScriptsPrefix     string               = "/usr/lib/atella/scripts"
 	updateVersion     string               = "unknown"
-	pkgTemplate       string               = "atella_%s-1_%s.%s"
+	PkgTemplate       string               = "atella_%s-1_%s.%s"
 	masterServerIndex int                  = 0
 )
 
@@ -154,14 +156,24 @@ func Command() {
 					masterServerIndex = conf.CurrentMasterServerIndex
 					conf.Logger.LogSystem(fmt.Sprintf("%s using for upgrade",
 						masterAddr[0]))
-					cmd := exec.Command(fmt.Sprintf("%s/atella-updater.sh",
-						ScriptsPrefix),
-						masterAddr[0],
-						fmt.Sprintf(pkgTemplate, updateVersion, Arch, Sys), Sys)
-					err = cmd.Start()
+					pkgName := fmt.Sprintf(PkgTemplate, updateVersion, Arch, Sys)
+					tmpPath := fmt.Sprintf("%s/%s", os.TempDir(), pkgName)
+					url := fmt.Sprintf("http://%s/download/pkg/%s/%s", masterAddr[0], Sys, pkgName)
+					err = DownloadFile(tmpPath, url)
 					if err != nil {
-						conf.Logger.LogError("Failed exec cli for update")
+						conf.Logger.LogError("Failed download")
 						conf.Logger.LogFatal(fmt.Sprintf("%s", err))
+					}
+					conf.Logger.LogSystem(fmt.Sprintf("Downloaded %s", tmpPath))
+					switch Sys {
+					case "deb":
+						conf.Logger.LogSystem(fmt.Sprintf("Debian system, install %s", tmpPath))
+						path, _ := exec.LookPath("dpkg")
+						err = syscall.Exec(path, []string{path, "-i", tmpPath}, os.Environ())
+						if err != nil {
+							conf.Logger.LogError("Failed exec update")
+							conf.Logger.LogFatal(fmt.Sprintf("%s", err))
+						}
 					}
 					break
 				}
@@ -177,6 +189,29 @@ func Command() {
 	default:
 		conf.Logger.LogError(fmt.Sprintf("Unknown command: %s", cmd))
 	}
+}
+
+// DownloadFile will download a url to a local file. It's efficient because
+// it will write as it downloads and not load the whole file into memory.
+func DownloadFile(filepath string, url string) error {
+
+	// Get the data
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Create the file
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	// Write the body to file
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
 
 // Function is a handler for runtime flag -h.
