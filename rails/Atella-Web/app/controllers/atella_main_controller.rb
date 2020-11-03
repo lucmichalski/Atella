@@ -11,23 +11,11 @@ class AtellaMainController < ApplicationController
       @error = v
     end
     if @error.nil?
-      @redis = Redis.new(host: @settings["atella"]["redisHost"])
+      @redis = Redis.new(url: "redis://#{ENV.fetch("REDIS_URL") { "127.0.0.1" }}")
       @masters = Host.where(:is_master => true)
       
       if @masters.nil?
-        return
-      end
-      @masters.each do |m|
-        vector = wrap_master_host(m.address, m.hostname, securityConfig)
-        vector = processVector(vector)
-        unless @redis.nil?
-          redisVector = @redis.get(m.hostname)
-        else
-          redisVector = "{}"
-        end
-        # unless vector.eql?(redisVector)
-        #   @redis.set(m.hostname, vector)
-        # end
+        @error = "Not enouth masters!"
       end
     end
   end
