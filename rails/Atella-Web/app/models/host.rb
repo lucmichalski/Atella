@@ -113,7 +113,6 @@ class Host < ApplicationRecord
       _change = false
       _host = v[0]
       _st = v[1] 
-      print "#{_st[:sectors]}"
       h = Host.find_by(hostname: _host)
       if h.nil?
         h = Host.new
