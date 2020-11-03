@@ -127,7 +127,7 @@ func (s *AtellaServer) OnNewMessage(c *ServerClient, message string) bool {
 	}
 
 	// Commands, require security check
-	if c.params.canTalk == true {
+	if c.params.canTalk {
 		s.configuration.Logger.LogInfo(fmt.Sprintf("Server receive [%s]", msg))
 		switch msgMap[0] {
 		case "who":
