@@ -92,8 +92,10 @@ type SectorConfig struct {
 }
 
 type reporter struct {
-	mux      sync.Mutex
-	isLocked bool
+	mux         sync.Mutex
+	isLocked    bool
+	stopRequest bool
+	stopReply   bool
 }
 
 type Config struct {
@@ -110,8 +112,6 @@ type Config struct {
 	MasterVector             map[string][]VectorType
 	MasterVectorMutex        sync.RWMutex
 	CurrentMasterServerIndex int
-	SenderStopRequest     chan struct{}
-	SenderStopReply     bool
 }
 
 func NewConfig() *Config {
@@ -141,10 +141,11 @@ func NewConfig() *Config {
 		Vector:                   make([]VectorType, 0),
 		MasterVector:             make(map[string][]VectorType, 0),
 		MasterVectorMutex:        sync.RWMutex{},
-		CurrentMasterServerIndex: 0,
-		SenderStopRequest:     make(chan struct{}),
-		SenderStopReply: false,}
+		CurrentMasterServerIndex: 0}
 
+	local.reporter.stopReply = false
+	local.reporter.stopRequest = false
+	local.reporter.isLocked = false
 	return local
 }
 
@@ -283,12 +284,16 @@ func (c *Config) GetPid() int {
 // Function print Config as json format
 func (c *Config) PrintJsonConfig() {
 	config_json := c.GetJsonConfig()
+	c.Logger.LogSystem("Configuration:")
 	c.Logger.LogSystem(string(config_json))
 }
 
 // Function return Config as json format
 func (c *Config) GetJsonConfig() []byte {
-	config_json, _ := json.Marshal(c)
+	config_json, err := json.Marshal(c)
+	if err != nil {
+		c.Logger.LogSystem(fmt.Sprintf("Json encoding conig - %s", err))
+	}
 	return config_json
 }
 
@@ -318,7 +323,6 @@ func (c *Config) GetJsonMasterVector() []byte {
 
 	return res
 }
-
 
 // Function add channel config into channels section
 func (c *Config) addChannel(name string, table *ast.Table) error {

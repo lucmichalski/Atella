@@ -88,7 +88,7 @@ func initFlags() {
 		err := conf.LoadConfig(configFilePath)
 		if err != nil {
 			logger := AtellaLogger.New(4, "stderr")
-			logger.LogFatal(fmt.Sprintf("%s", err))
+			logger.LogFatal(fmt.Sprintf("[CLI] %s", err))
 		}
 		fmt.Println(conf.Agent.PidFile)
 		os.Exit(0)
@@ -103,15 +103,15 @@ func Command() {
 	err = conf.LoadConfig(configFilePath)
 	if err != nil {
 		logger := AtellaLogger.New(4, "stderr")
-		logger.LogFatal(fmt.Sprintf("%s", err))
+		logger.LogFatal(fmt.Sprintf("[CLI] %s", err))
 	}
 	err = conf.LoadDirectory(configDirPath)
 	if err != nil {
 		logger := AtellaLogger.New(4, "stderr")
-		logger.LogFatal(fmt.Sprintf("%s", err))
+		logger.LogFatal(fmt.Sprintf("[CLI] %s", err))
 	}
 
-	conf.Logger.LogSystem(fmt.Sprintf("Started %s version %s",
+	conf.Logger.LogSystem(fmt.Sprintf("[CLI] Started %s version %s",
 		Service, Version))
 
 	switch strings.ToLower(cmd) {
@@ -123,7 +123,7 @@ func Command() {
 		case "custom":
 			conf.Report(msg, target)
 		default:
-			conf.Logger.LogError(fmt.Sprintf("Unknown report type: %s", reportType))
+			conf.Logger.LogError(fmt.Sprintf("[CLI] Unknown report type: %s", reportType))
 		}
 		os.Exit(0)
 	case "send":
@@ -154,40 +154,40 @@ func Command() {
 				} else {
 					masterconn.Close()
 					masterServerIndex = conf.CurrentMasterServerIndex
-					conf.Logger.LogSystem(fmt.Sprintf("%s using for upgrade",
+					conf.Logger.LogSystem(fmt.Sprintf("[CLI] %s using for upgrade",
 						masterAddr[0]))
 					pkgName := fmt.Sprintf(PkgTemplate, updateVersion, Arch, Sys)
 					tmpPath := fmt.Sprintf("%s/%s", os.TempDir(), pkgName)
 					url := fmt.Sprintf("http://%s/download/pkg/%s/%s", masterAddr[0], Sys, pkgName)
 					err = DownloadFile(tmpPath, url)
 					if err != nil {
-						conf.Logger.LogError("Failed download")
-						conf.Logger.LogFatal(fmt.Sprintf("%s", err))
+						conf.Logger.LogError("[CLI] Failed download")
+						conf.Logger.LogFatal(fmt.Sprintf("[CLI] %s", err))
 					}
-					conf.Logger.LogSystem(fmt.Sprintf("Downloaded %s", tmpPath))
+					conf.Logger.LogSystem(fmt.Sprintf("[CLI] Downloaded %s", tmpPath))
 					switch Sys {
 					case "deb":
-						conf.Logger.LogSystem(fmt.Sprintf("Debian system, install %s", tmpPath))
+						conf.Logger.LogSystem(fmt.Sprintf("[CLI] Debian system, install %s", tmpPath))
 						path, _ := exec.LookPath("dpkg")
 						err = syscall.Exec(path, []string{path, "-i", tmpPath}, os.Environ())
 						if err != nil {
-							conf.Logger.LogError("Failed exec update")
-							conf.Logger.LogFatal(fmt.Sprintf("%s", err))
+							conf.Logger.LogError("[CLI] Failed exec update")
+							conf.Logger.LogFatal(fmt.Sprintf("[CLI] %s", err))
 						}
 					}
 					break
 				}
 				if conf.CurrentMasterServerIndex == masterServerIndex {
-					conf.Logger.LogError("Could not connect to any of masters")
+					conf.Logger.LogError("[CLI] Could not connect to any of masters")
 					break
 				}
 			}
 		} else {
-			conf.Logger.LogError("Version not specifyed")
+			conf.Logger.LogError("[CLI] Version not specifyed")
 		}
 	case "rotate":
 	default:
-		conf.Logger.LogError(fmt.Sprintf("Unknown command: %s", cmd))
+		conf.Logger.LogError(fmt.Sprintf("[CLI] Unknown command: %s", cmd))
 	}
 }
 
@@ -216,7 +216,7 @@ func DownloadFile(filepath string, url string) error {
 
 // Function is a handler for runtime flag -h.
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [params]\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "[CLI] Usage: %s [params]\n", os.Args[0])
 	flag.PrintDefaults()
 	os.Exit(1)
 }

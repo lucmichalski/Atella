@@ -38,22 +38,23 @@ var (
 func handle(c chan os.Signal) {
 	for {
 		sig := <-c
-		conf.Logger.LogSystem(fmt.Sprintf("Receive %s [%s]", sig, sig.String()))
+		conf.Logger.LogSystem(fmt.Sprintf("[%s] Receive %s [%s]",
+			Service, sig, sig.String()))
 		switch sig.String() {
 		case "hangup":
 			err := conf.LoadConfig(configFilePath)
 			if err != nil {
-				conf.Logger.LogFatal(fmt.Sprintf("%s", err))
+				conf.Logger.LogFatal(fmt.Sprintf("[%s] %s", Service, err))
 			}
 			err = conf.LoadDirectory(configDirPath)
 			if err != nil {
-				conf.Logger.LogFatal(fmt.Sprintf("%s", err))
+				conf.Logger.LogFatal(fmt.Sprintf("[%s] %s", Service, err))
 			}
 			conf.Init()
 			conf.PrintJsonConfig()
 			client.Reload(conf)
 			AtellaDatabase.Reload(conf)
-			conf.Logger.LogSystem("Reloaded")
+			conf.Logger.LogSystem(fmt.Sprintf("[%s] Reloaded", Service))
 		case "interrupt":
 			if !stop {
 				stop = true
@@ -62,7 +63,8 @@ func handle(c chan os.Signal) {
 				conf.StopSender()
 			} else {
 				if conf != nil {
-					conf.Logger.LogSystem("Already in Progress")
+					conf.Logger.LogSystem(fmt.Sprintf("[%s] Already in Progress",
+						Service))
 				}
 			}
 			os.Exit(0)
@@ -77,7 +79,7 @@ func handle(c chan os.Signal) {
 
 // Function is a handler for runtime flag -h.
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [params]\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "[%s] Usage: %s [params]\n", Service, os.Args[0])
 	flag.PrintDefaults()
 	os.Exit(1)
 }
@@ -120,23 +122,25 @@ func main() {
 	err = conf.LoadConfig(configFilePath)
 	if err != nil {
 		logger := AtellaLogger.New(4, "stderr")
-		logger.LogFatal(fmt.Sprintf("%s", err))
+		logger.LogFatal(fmt.Sprintf("[%s] %s", Service, err))
 	}
 	err = conf.LoadDirectory(configDirPath)
 	if err != nil {
 		logger := AtellaLogger.New(4, "stderr")
-		logger.LogFatal(fmt.Sprintf("%s", err))
+		logger.LogFatal(fmt.Sprintf("[%s] %s", Service, err))
 	}
 	conf.Init()
 	conf.PrintJsonConfig()
 
 	conf.SavePid()
 
-	pkgName := fmt.Sprintf(AtellaCli.PkgTemplate, AtellaConfig.Version, AtellaConfig.Arch, AtellaConfig.Sys)
+	pkgName := fmt.Sprintf(AtellaCli.PkgTemplate,
+		AtellaConfig.Version, AtellaConfig.Arch, AtellaConfig.Sys)
 	tmpPath := fmt.Sprintf("%s/%s", os.TempDir(), pkgName)
 	_, err = os.Stat(tmpPath)
 	if os.IsExist(err) {
-		conf.Logger.LogSystem(fmt.Sprintf("Deleting package %s", tmpPath))
+		conf.Logger.LogSystem(fmt.Sprintf("[%s] Deleting package %s",
+			Service, tmpPath))
 		os.Remove(tmpPath)
 	}
 	// AtellaDatabase.Init(conf)
@@ -150,8 +154,8 @@ func main() {
 	signal.Notify(c, syscall.SIGUSR2)
 
 	go handle(c)
-	conf.Logger.LogSystem(fmt.Sprintf("Started %s version %s",
-		AtellaConfig.Service, AtellaConfig.Version))
+	conf.Logger.LogSystem(fmt.Sprintf("[%s] Started %s version %s",
+		Service, AtellaConfig.Service, AtellaConfig.Version))
 	server = AtellaServer.New(conf, "0.0.0.0:5223")
 	go server.Listen()
 	go server.MasterServer()
@@ -160,7 +164,4 @@ func main() {
 	go client.Run()
 
 	conf.Sender()
-	// for !server.CloseReplyServer || !server.CloseReplyMaster ||
-	// 	!client.CloseReply || !conf.SenderStopReply {
-	// }
 }
