@@ -4,6 +4,6 @@ atella:
   sectorsConfig: "/etc/atella/conf.d/sectors.conf"
   securityConfig: "/etc/atella/conf.d/sec.conf"
   filesDirectory: "/usr/share/atella/"
-  packagesDirectory: "pkg/"
-  configsDirectory: "cfg/"
+  packagesSubDirectory: "pkg/"
+  configsSubDirectory: "cfg/"
   

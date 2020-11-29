@@ -31,6 +31,11 @@
                   <a href="<%= cfg_path %>">Configs</a>
                 </div>
               </nav>
+              <%- if ENV['RAILS_ENV'].eql?('development') %>
+                <div class="develop-page">
+                    <a class="develop-page-link" href="<%= dev_path %>">Develop</a>
+                </div>
+              <%- end %>
               <div class="client-info">
                 <div class="client-ip-address">
                   IP: <%= request.remote_addr %>

@@ -33,7 +33,7 @@ class AtellaMainController < ApplicationController
   end
   
   def pkg
-    pkgDir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["packagesDirectory"]}"
+    pkgDir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["packagesSubDirectory"]}"
     @debPkgDir = Dir["#{pkgDir}deb/*.deb"].sort
     @rpmPkgDir = Dir["#{pkgDir}rpm/*.rpm"].sort
     @tarPkgDir = Dir["#{pkgDir}tar/*.tar*"].sort
@@ -42,7 +42,7 @@ class AtellaMainController < ApplicationController
   def pkg_post
     act = params[:act]
     pkg = params[:pkg]
-    pkgDir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["packagesDirectory"]}"
+    pkgDir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["packagesSubDirectory"]}"
     post = params["Delete"]
     case act
     when "delete"
@@ -53,8 +53,15 @@ class AtellaMainController < ApplicationController
   end
 
   def cfg
-    dir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["configsDirectory"]}"
+    dir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["configsSubDirectory"]}"
     @cfgDir = Dir["#{dir}*"].sort
+  end
+
+  def dev
+    # render file: "#{Rails.root}/public/403", status: 403
+    if ENV['RAILS_ENV'].eql?('production') 
+      render file: "#{Rails.root}/public/403", status: 403
+    end
   end
   
   def render_404

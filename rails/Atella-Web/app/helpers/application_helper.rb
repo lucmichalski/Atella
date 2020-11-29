@@ -11,27 +11,40 @@ module ApplicationHelper
     end
     begin
       s = TCPSocket.open(addr, 5223)
-      s.puts(sec["security"]["code"])
+      s.puts("auth #{sec["security"]["code"]}")
       loop do
         line = s.gets
-        break if (line == "Bye!" || line.nil?)
+        break if line.nil?
         l = line.rstrip.split
         case (l[0])
-          when "Bye!"
-            break
-          when "canTalk"
-            s.puts("export master")
-            st = s.gets.split[1]
-            status["status"] = JSON.parse(st)
-            s.puts("version")
-            status["version"] = s.gets.split[1]
-            unless status["version"].nil?
-              status["version"].rstrip!
+          when "+OK"
+            break if l.length < 2
+            case (l[1]) 
+              when "bye!"
+                break
+              when "ack"
+                break if l.length < 3
+                case (l[2])
+                  when "auth"
+                    s.puts("export master")
+                  when "master"
+                    break if l.length < 4
+                    status["status"] = JSON.parse(l[3])
+                    s.puts("get version")
+                  when "version"
+                    break if l.length < 4
+                    status["version"] = l[3]
+                    unless status["version"].nil?
+                      status["version"].rstrip!
+                    end
+                    s.puts("exit")
+                  else
+                    break
+                end
+              else
+                break
             end
-            s.puts("exit")
-            break
           else
-            s.puts("exit")
             break
         end
       end

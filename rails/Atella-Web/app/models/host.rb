@@ -9,25 +9,40 @@ class Host < ApplicationRecord
     end
     begin
       s = TCPSocket.open(self.address, 5223)
-      s.puts(code)
+      s.puts("auth #{code}")
       loop do
         line = s.gets
-        break if (line == "Bye!" || line.nil?)
+        break if line.nil?
         l = line.rstrip.split
         case (l[0])
-          when "Bye!"
-            break
-          when "canTalk"
-            s.puts("version")
-            self.version = s.gets.split[1]
-            unless self.version.nil?
-              self.version.rstrip!  
-              res = true
+          when "+OK"
+            break if l.length < 2
+            case (l[1]) 
+              when "bye!"
+                break
+              when "ack"
+                break if l.length < 3
+                case (l[2])
+                  when "auth"
+                    s.puts("get version")
+                  when "master"
+                    break if l.length < 4
+                    status["status"] = JSON.parse(l[3])
+                  when "version"
+                    break if l.length < 4
+                    self.version = l[3]
+                    unless self.version.nil?
+                      self.version.rstrip!  
+                      res = true
+                    end
+                    s.puts("exit")
+                  else
+                    break
+                end
+              else
+                break
             end
-            s.puts("exit")
-            break
           else
-            s.puts("exit")
             break
         end
       end
@@ -93,13 +108,14 @@ class Host < ApplicationRecord
       end
     end
 
-    unless masterConfigFlag
+    if masterConfigFlag
       mastersConfig["master_servers"]["hosts"].each do |host|
         _host = host.split()
         if _host.length < 2
           STDERR.print("[ERROR]: Incorrect host [#{host}]!\n")
           next
         end
+        
         hostsList[_host[1]] = Hash.new if hostsList[_host[1]].nil?
         hostsList[_host[1]][:version] = "unknown"
         hostsList[_host[1]][:is_master] = true

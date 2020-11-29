@@ -5,8 +5,6 @@ namespace :agents do
     settings = Rails.application.config.atella  
     error = nil
     begin
-      mastersConfig = TOML.load_file(settings["atella"]["masterServersConfig"])
-      sectorsConfig = TOML.load_file(settings["atella"]["sectorsConfig"])
       securityConfig = TOML.load_file(settings["atella"]["securityConfig"])
     rescue => v
       error = v
