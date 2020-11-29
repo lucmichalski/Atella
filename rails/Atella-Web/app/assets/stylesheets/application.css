@@ -14,7 +14,7 @@
  *= require_self
  */
 
- body {
+body {
   margin: 0;
   font-size: 14px;
   line-height: 20px;
@@ -26,7 +26,7 @@ div {
 }
 
 a {
-  color: rgb(255, 255, 255) !important;
+  color: rgb(255, 255, 255);
   text-decoration: none;
 }
 
@@ -108,6 +108,16 @@ header.head-main {
   color: #fff;
   box-sizing: border-box;
   margin-bottom: 0px;
+}
+
+div.develop-page {
+  box-sizing: border-box;
+  text-align: end;
+  padding-right: 10px;
+}
+
+a.develop-page-link {
+  color: #f00;
 }
 
 div.client-info {

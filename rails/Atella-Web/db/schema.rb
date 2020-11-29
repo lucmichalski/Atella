@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_09_12_032652) do
+ActiveRecord::Schema.define(version: 2020_10_30_083007) do
 
   create_table "hosts", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", force: :cascade do |t|
     t.string "address", default: "unknown"
@@ -19,6 +19,7 @@ ActiveRecord::Schema.define(version: 2020_09_12_032652) do
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
     t.boolean "is_master", default: false, null: false
+    t.text "sectors"
   end
 
 end

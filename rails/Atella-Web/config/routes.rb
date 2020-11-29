@@ -7,6 +7,7 @@ Rails.application.routes.draw do
   get '/cfg' => "atella_main#cfg"
   get '/sectors' => "atella_main#sectors"
   get '/hosts' => "atella_main#hosts"
+  get '/dev' => "atella_main#dev"
   
   #post
   post '/pkg/:pkg/:act' => "atella_main#pkg_post"

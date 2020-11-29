@@ -5,22 +5,20 @@ namespace :agents do
     settings = Rails.application.config.atella  
     error = nil
     begin
-      mastersConfig = TOML.load_file(settings["atella"]["masterServersConfig"])
-      sectorsConfig = TOML.load_file(settings["atella"]["sectorsConfig"])
       securityConfig = TOML.load_file(settings["atella"]["securityConfig"])
     rescue => v
       error = v
     end
     
     if error 
-      STDERR.print("Fatal: #{error}\n")
+      STDERR.print("[FATAL]: #{error}\n")
       return
     end
     hosts = Host.all
     hosts.each do |h|
       res = h.wrap_version(securityConfig["security"]["code"])
       h.save if res
-      STDERR.print("#{h.address} #{h.hostname}\n")
+      STDERR.print("[INFO]: #{h.address} #{h.hostname}\n")
     end
   end
 
@@ -32,7 +30,8 @@ namespace :agents do
     redisVectors = Array.new
     statuses = Hash.new
     if masters.nil?
-      STDERR.print "Not enouth masters!"
+      STDERR.print("[ERROR]: Not enouth masters!\n")
+      return
     end
     masters.each do |m|
       _r = redis.get(m.hostname)
@@ -57,14 +56,14 @@ namespace :agents do
     end
 
     if error 
-      STDERR.print("Fatal: #{error}\n") 
+      STDERR.print("[FATAL]: #{error}\n") 
       return 
     end
     
     redis = Redis.new(host: settings["atella"]["redisHost"])
     masters = Host.where(:is_master => true)
     if masters.nil? || redis.nil?
-      STDERR.print("Fatal: redis - #{redis.nil?}, masters = #{masters.nil?}\n") 
+      STDERR.print("[FATAL]: redis - #{redis.nil?}, masters - #{masters.nil?}\n") 
       return
     end
 

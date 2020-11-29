@@ -11,13 +11,18 @@ import (
 	"time"
 
 	"../AtellaConfig"
-	"../AtellaDatabase"
+)
+
+const (
+	okMsg  string = "+OK"
+	errMsg string = "-ERR"
 )
 
 // Parameters for each client
 type clientParams struct {
 	canTalk                 bool
 	id                      uint64
+	emptyMessageCnt         uint64
 	currentClientHostname   string
 	currentClientVectorJson string
 }
@@ -25,17 +30,20 @@ type clientParams struct {
 // Client description
 type ServerClient struct {
 	conn   net.Conn
-	Server *server
+	Server *AtellaServer
 	params clientParams
 }
 
 // Server parameters
-type server struct {
-	address       string
-	port          int16
-	configuration *AtellaConfig.Config
-	global        uint64
-	tlsConfig     *tls.Config
+type AtellaServer struct {
+	address          string
+	configuration    *AtellaConfig.Config
+	global           uint64
+	tlsConfig        *tls.Config
+	reloadRequest    chan struct{}
+	stopRequest      chan struct{}
+	CloseReplyServer bool
+	CloseReplyMaster bool
 }
 
 // Processing client
@@ -43,6 +51,15 @@ func (c *ServerClient) listen() {
 	c.Server.OnNewClient(c)
 	reader := bufio.NewReader(c.conn)
 	var exit = false
+	
+	go func() {
+		<-c.Server.stopRequest
+		exit = true
+		if c.conn != nil {
+			c.conn.Close()
+		}
+	}()
+
 	for exit == false {
 		message, err := reader.ReadString('\n')
 		if err != nil {
@@ -80,9 +97,9 @@ func (c *ServerClient) Close() error {
 }
 
 // Processing client connection
-func (s *server) OnNewClient(c *ServerClient) {
-	s.configuration.Logger.LogInfo(fmt.Sprintf("New connect [%d], can talk with him - %t",
-		s.global, c.params.canTalk))
+func (s *AtellaServer) OnNewClient(c *ServerClient) {
+	s.configuration.Logger.LogInfo(fmt.Sprintf("[Server] New connect from %s[%d], can talk with him - %t",
+		c.conn.RemoteAddr(), s.global, c.params.canTalk))
 	// Logical splitting clients by pseudo-unique id
 	c.params.id = s.global
 	s.global = s.global + 1
@@ -94,189 +111,200 @@ func (s *server) OnNewClient(c *ServerClient) {
 }
 
 // Processing client disconnection
-func (s *server) OnClientConnectionClosed(c *ServerClient, err error) {
-	s.configuration.Logger.LogInfo(fmt.Sprintf("Client [%d] go away", c.params.id))
+func (s *AtellaServer) OnClientConnectionClosed(c *ServerClient, err error) {
+	s.configuration.Logger.LogInfo(fmt.Sprintf("[Server] Client [%d] go away", c.params.id))
 }
 
 // Processing each message, receiving from clients
-func (s *server) OnNewMessage(c *ServerClient, message string) bool {
+func (s *AtellaServer) OnNewMessage(c *ServerClient, message string) bool {
 	var (
 		msg    = strings.TrimRight(message, "\r\n")
 		msgMap = strings.Split(msg, " ")
 	)
+	if msg == "" {
+		if c.params.emptyMessageCnt > 5 {
+			s.configuration.Logger.LogWarning(
+				fmt.Sprintf("[Server] Server receive %d empty messages. Force closing connection.",
+					c.params.emptyMessageCnt))
+			return true
+		}
+		c.params.emptyMessageCnt = c.params.emptyMessageCnt + 1
+	} else {
+		c.params.emptyMessageCnt = 0
+	}
 
-	// Commands, dont.t require security check
+	s.configuration.Logger.LogInfo(fmt.Sprintf("[Server] Server receive [%s | %d]", msg, len(msg)))
 	switch msgMap[0] {
+	// Commands, dont.t require security check
 	case "quit", "exit":
-		c.Send(fmt.Sprintf("Bye!\n"))
+		c.Send(fmt.Sprintf("%s bye!\n", okMsg))
 		return true
+
 	case "export":
 		if len(msgMap) > 1 {
 			if msgMap[1] == "vector" {
-				c.Send(fmt.Sprintf("ackvector %s\n", s.configuration.GetJsonVector()))
+				c.Send(fmt.Sprintf("%s ack vector %s\n", okMsg, s.configuration.GetJsonVector()))
 				s.configuration.PrintJsonVector()
 			} else if msgMap[1] == "master" {
-				c.Send(fmt.Sprintf("ackmaster %s\n", s.configuration.GetJsonMasterVector()))
+				c.Send(fmt.Sprintf("%s ack master %s\n", okMsg, s.configuration.GetJsonMasterVector()))
 				s.configuration.PrintJsonMasterVector()
 			}
 		}
+
 	case "ping":
 		c.Send("pong")
-	}
 
 	// Commands, require security check
-	if c.params.canTalk == true {
-		s.configuration.Logger.LogInfo(fmt.Sprintf("Server receive [%s]", msg))
-		switch msgMap[0] {
-		case "who":
-			c.Send(fmt.Sprintf("Id: %d\n", c.params.id))
-		case "host":
-			if len(msgMap) > 1 {
-				c.params.currentClientHostname = msgMap[1]
-				c.Send(fmt.Sprintf("ackhost %s\n", c.params.currentClientHostname))
-			}
+	case "get":
+		switch msgMap[1] {
+		case "whoami":
+			c.Send(fmt.Sprintf("%s ack whoami %d\n", okMsg, c.params.id))
 		case "hostname":
-			c.Send(fmt.Sprintf("ackhostname %s\n", s.configuration.Agent.Hostname))
+			c.Send(fmt.Sprintf("%s ack hostname %s\n", okMsg, s.configuration.Agent.Hostname))
 		case "version":
-			c.Send(fmt.Sprintf("ackversion %s\n", AtellaConfig.Version))
-		case "help":
-			c.help()
-		// case "update":
-		// 	if len(msgMap) > 1 {
-		// 		version := msgMap[1]
-		// 		AtellaLogger.LogSystem(fmt.Sprintf("Receive update to %s from %s",
-		// 			version, AtellaConfig.Version))
-		// 		if version != AtellaConfig.Version {
-		// 			AtellaLogger.LogSystem(fmt.Sprintf("Initiate install %s",
-		// 				version))
-		// 			cmd := exec.Command(fmt.Sprintf("%s/atella-cli",
-		// 				AtellaConfig.BinPrefix),
-		// 				"-cmd", "update", "-to-version", version)
-		// 			err := cmd.Start()
-		// 			// err := syscall.Exec(fmt.Sprintf("%s/atella-cli",
-		// 			// 	AtellaConfig.BinPrefix),
-		// 			// 	[]string{fmt.Sprintf("%s/atella-cli",
-		// 			// 		AtellaConfig.BinPrefix),
-		// 			// 		"-cmd", "update", "-to-version", version}, os.Environ())
+			c.Send(fmt.Sprintf("%s ack version %s\n", okMsg, AtellaConfig.Version))
+		default:
+			s.configuration.Logger.LogWarning(fmt.Sprintf("[Server] Unknown cmd %s [%s]\n",
+				msgMap[1], msg))
+		}
 
-		// 			if err != nil {
-		// 				AtellaLogger.LogError("Failed exec cli for update")
-		// 				AtellaLogger.LogError(
-		// 					fmt.Sprintf("%s/atella-cli -cmd update -to-version %s",
-		// 						AtellaConfig.BinPrefix, version))
-		// 				AtellaLogger.LogError(fmt.Sprintf("%s", err))
-		// 			}
-		// 			cmd.Process.Release()
-		// 		}
-		// 	}
-		case "set":
+	case "set":
+		switch msgMap[1] {
+		case "host":
 			if len(msgMap) > 2 {
-				c.params.currentClientHostname = msgMap[1]
-				c.params.currentClientVectorJson = msgMap[2]
-				if c.params.currentClientHostname != "" &&
-					c.params.currentClientVectorJson != "" {
-					var vec []AtellaConfig.VectorType
-					json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
-					s.configuration.MasterVectorMutex.Lock()
-					s.configuration.MasterVector[c.params.currentClientHostname] = vec
-					s.configuration.MasterVectorMutex.Unlock()
-				}
+				c.params.currentClientHostname = msgMap[2]
+				c.Send(fmt.Sprintf("%s ack host %s\n", okMsg, c.params.currentClientHostname))
+			} else {
+				c.Send(fmt.Sprintf("%s set host\n", errMsg))
+			}
+		case "vector":
+			if len(msgMap) > 3 {
+				c.params.currentClientHostname = msgMap[2]
+				c.params.currentClientVectorJson = msgMap[3]
+				var vec []AtellaConfig.VectorType
+				json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
+				s.configuration.MasterVectorMutex.Lock()
+				s.configuration.MasterVector[c.params.currentClientHostname] = vec
+				s.configuration.MasterVectorMutex.Unlock()
+				c.Send(fmt.Sprintf("%s ack set\n", okMsg))
+			} else {
+				c.Send(fmt.Sprintf("%s set vector\n", errMsg))
 			}
 		default:
-			s.configuration.Logger.LogWarning(fmt.Sprintf("Unknown cmd %s [%s]\n",
-				msgMap[0], msg))
+			s.configuration.Logger.LogWarning(fmt.Sprintf("[Server] Unknown cmd %s [%s]\n",
+				msgMap[1], msg))
 		}
-	} else if msg == s.configuration.Security.Code {
-		s.configuration.Logger.LogInfo(fmt.Sprintf("Server receive [%s], set canTalk -> true",
-			msg))
-		c.Send("canTalk\n")
-		c.params.canTalk = true
-	} else {
-		s.configuration.Logger.LogInfo(fmt.Sprintf("Server receive [%s], can't talk - ignore",
-			msg))
+
+	case "help":
+		c.help()
+
+	// Auth command
+	case "auth":
+		if len(msgMap) > 1 && msgMap[1] == s.configuration.Security.Code {
+			s.configuration.Logger.LogInfo(fmt.Sprintf("[Server] Code accept, auth success"))
+			c.Send(fmt.Sprintf("%s ack auth\n", okMsg))
+			c.params.canTalk = true
+		} else {
+			s.configuration.Logger.LogInfo(fmt.Sprintf("[Server] Server receive [%s], failed auth",
+			msgMap[1]))
+			c.Send(fmt.Sprintf("%s auth\n", errMsg))
+
+		}
+	default:
+		s.configuration.Logger.LogWarning(fmt.Sprintf("[Server] Unknown cmd %s [%s]\n",
+			msgMap[0], msg))
 	}
+
 	return false
 }
 
 func (c *ServerClient) help() {
 	c.Send("ping\n")
+	c.Send("auth {code}\n")
 	c.Send("export {vector/master}\n")
-	c.Send("host {hostname}\n")
-	c.Send("hostname\n")
-	c.Send("version\n")
-	c.Send("set {hostname} {vector}\n")
+	c.Send("get whoami\n")
+	c.Send("get hostname\n")
+	c.Send("get version\n")
+	c.Send("set host {hostname}\n")
+	c.Send("set vector {hostname} {vector}\n")
 	c.Send("exit\n")
+	c.Send(fmt.Sprintf("%s\n", okMsg))
 }
 
 // Listen for connections
-func (s *server) Listen() {
-	var listener net.Listener
+func (s *AtellaServer) Listen() {
+	var listener *net.TCPListener
 	var err error
+	address, err := net.ResolveTCPAddr("tcp", s.address)
 	if s.tlsConfig == nil {
-		listener, err = net.Listen("tcp", s.address)
+		listener, err = net.ListenTCP("tcp", address)
 	} else {
-		listener, err = tls.Listen("tcp", s.address, s.tlsConfig)
+		s.configuration.Logger.LogFatal("[Server] Tls server are not implemented")
+		// listener, err = tls.ListenTCP("tcp", address, s.tlsConfig)
 	}
 	if err != nil {
-		s.configuration.Logger.LogFatal(fmt.Sprintf("Error starting TCP server. %s", err))
+		s.configuration.Logger.LogFatal(fmt.Sprintf("[Server] Error starting TCP server. %s", err))
 	}
 	defer listener.Close()
 
 	for {
-		conn, _ := listener.Accept()
+		select {
+		case <-s.stopRequest:
+			s.configuration.Logger.LogSystem("[Server] Stopping server")
+			s.CloseReplyServer = true
+			return
+		default:
+		}
+		listener.SetDeadline(time.Now().Add(1e9))
+		conn, err := listener.Accept()
+		if err != nil {
+			if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+				continue
+			}
+			s.configuration.Logger.LogError(
+				fmt.Sprintf("[Server] Failed to accept connection: %s", err.Error()))
+			continue
+		}
 		client := &ServerClient{
 			conn:   conn,
 			Server: s,
 			params: clientParams{
-				canTalk: false}}
+				canTalk:         false,
+				emptyMessageCnt: 0}}
 		go client.listen()
 	}
 }
 
-// Create new server 
-func New(c *AtellaConfig.Config, address string) *server {
-	c.Logger.LogSystem(fmt.Sprintf("Init server side with address %s",
+// Create new server
+func New(c *AtellaConfig.Config, address string) *AtellaServer {
+	c.Logger.LogSystem(fmt.Sprintf("[Server] Init server side with address %s",
 		address))
-	server := &server{
-		address:       address,
-		tlsConfig:     nil,
-		configuration: c}
+	server := &AtellaServer{
+		address:          address,
+		tlsConfig:        nil,
+		configuration:    c,
+		stopRequest:      make(chan struct{}),
+		reloadRequest:    make(chan struct{}),
+		CloseReplyServer: false,
+		CloseReplyMaster: false}
 	return server
 }
 
-// Function impement master server logic
-func (s *server) MasterServer() {
-	if s.configuration.Agent.Master {
-		s.configuration.Logger.LogSystem("I'm master server")
+// Function for stopping server
+func (s *AtellaServer) Stop() {
+	close(s.stopRequest)
+	for !s.CloseReplyServer || !s.CloseReplyMaster {
 	}
-
-	s.configuration.MasterVectorMutex.Lock()
-	s.configuration.MasterVector = make(map[string][]AtellaConfig.VectorType, 0)
-	s.configuration.MasterVectorMutex.Unlock()
-	for {
-		time.Sleep(time.Duration(s.configuration.Agent.Interval) * time.Second)
-		s.insertVector()
-	}
+	s.configuration.Logger.LogSystem("[Server] Server stopped")
 }
 
-func (s *server) insertVector() error {
-
-	count, _ := AtellaDatabase.SelectQuery(fmt.Sprintf(
-		"SELECT * FROM vector WHERE master='%s'",
-		s.configuration.Agent.Hostname))
-	if count > 0 {
-
-	}
-	return nil
-}
-
-// func NewWithTLS(address string, certFile string, keyFile string) *server {
+// func NewWithTLS(address string, certFile string, keyFile string) *AtellaServer {
 // 	AtellaLogger.LogInfo(fmt.Sprintf("Init tls server side with address %s", address))
 // 	cert, _ := tls.LoadX509KeyPair(certFile, keyFile)
 // 	config := tls.Config{
 // 		Certificates: []tls.Certificate{cert},
 // 	}
-// 	server := &server{
+// 	server := &AtellaServer{
 // 		address: address,
 // 		config:  &config,
 // 	}

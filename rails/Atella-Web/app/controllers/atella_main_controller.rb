@@ -11,23 +11,11 @@ class AtellaMainController < ApplicationController
       @error = v
     end
     if @error.nil?
-      @redis = Redis.new(host: @settings["atella"]["redisHost"])
+      @redis = Redis.new(url: "redis://#{ENV.fetch("REDIS_URL") { "127.0.0.1" }}")
       @masters = Host.where(:is_master => true)
       
       if @masters.nil?
-        return
-      end
-      @masters.each do |m|
-        vector = wrap_master_host(m.address, m.hostname, securityConfig)
-        vector = processVector(vector)
-        unless @redis.nil?
-          redisVector = @redis.get(m.hostname)
-        else
-          redisVector = "{}"
-        end
-        # unless vector.eql?(redisVector)
-        #   @redis.set(m.hostname, vector)
-        # end
+        @error = "Not enouth masters!"
       end
     end
   end
@@ -45,7 +33,7 @@ class AtellaMainController < ApplicationController
   end
   
   def pkg
-    pkgDir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["packagesDirectory"]}"
+    pkgDir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["packagesSubDirectory"]}"
     @debPkgDir = Dir["#{pkgDir}deb/*.deb"].sort
     @rpmPkgDir = Dir["#{pkgDir}rpm/*.rpm"].sort
     @tarPkgDir = Dir["#{pkgDir}tar/*.tar*"].sort
@@ -54,7 +42,7 @@ class AtellaMainController < ApplicationController
   def pkg_post
     act = params[:act]
     pkg = params[:pkg]
-    pkgDir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["packagesDirectory"]}"
+    pkgDir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["packagesSubDirectory"]}"
     post = params["Delete"]
     case act
     when "delete"
@@ -65,8 +53,15 @@ class AtellaMainController < ApplicationController
   end
 
   def cfg
-    dir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["configsDirectory"]}"
+    dir = "#{@settings["atella"]["filesDirectory"] + @settings["atella"]["configsSubDirectory"]}"
     @cfgDir = Dir["#{dir}*"].sort
+  end
+
+  def dev
+    # render file: "#{Rails.root}/public/403", status: 403
+    if ENV['RAILS_ENV'].eql?('production') 
+      render file: "#{Rails.root}/public/403", status: 403
+    end
   end
   
   def render_404

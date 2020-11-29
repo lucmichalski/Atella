@@ -61,4 +61,5 @@ Rails.application.configure do
   config.file_watcher = ActiveSupport::EventedFileUpdateChecker
 
   config.web_console.allowed_ips = ["127.0.0.0/8", '0.0.0.0/0']
+  config.hosts = nil
 end

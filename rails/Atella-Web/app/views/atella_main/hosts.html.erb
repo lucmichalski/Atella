@@ -11,7 +11,7 @@
       </div>
     </div>
     <div class="divTableBody">
-      <%- @hostsConfig.each_with_index do |host, i| %>
+      <%- @hostsConfig.each do |host| %>
         <div class="divTableRow">
           <div class="divTableCell">
             <%= host["id"] %>
@@ -23,7 +23,7 @@
             <%= host["version"] %>
           </div>
           <div class="divTableCell">
-            <%= "Not implemented" %>
+            <%= host["sectors"] %>
           </div>
           <div class="divTableCell">
             <%= host["is_master"] %>

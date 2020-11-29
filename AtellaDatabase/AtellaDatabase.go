@@ -30,7 +30,7 @@ func Reload(c *AtellaConfig.Config) {
 	}
 	conf = c
 	if conf.DB.Type != "" {
-		c.Logger.LogInfo(fmt.Sprintf("Reload db with [%s:%s@%s:%d/%s",
+		c.Logger.LogInfo(fmt.Sprintf("Reload db with [%s:%s@%s:%d/%s]",
 			conf.DB.User, conf.DB.Password, conf.DB.Host,
 			conf.DB.Port, conf.DB.Dbname))
 	} else {

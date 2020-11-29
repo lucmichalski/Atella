@@ -10,7 +10,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"../AtellaMailChannel"
 	"../AtellaTgSibnetChannel"
@@ -71,10 +70,22 @@ func (conf *Config) Init() {
 	}
 }
 
+func (conf *Config) StopSender() {
+	conf.Logger.LogSystem("Sender request stop")
+	conf.reporter.stopRequest = true
+	for !conf.reporter.stopReply {
+	}
+	conf.Logger.LogSystem("Sender stopped")
+}
+
 func (conf *Config) Sender() {
 	for {
 		conf.Send()
-		time.Sleep(10 * time.Second)
+		Pause(10, &conf.reporter.stopRequest)
+		if conf.reporter.stopRequest {
+			conf.reporter.stopReply = true
+			break
+		}
 	}
 }
 
