@@ -183,9 +183,7 @@ func (s *AtellaServer) OnNewMessage(c *ServerClient, message string) bool {
 				c.params.currentClientVectorJson = msgMap[3]
 				var vec []AtellaConfig.VectorType
 				json.Unmarshal([]byte(c.params.currentClientVectorJson), &vec)
-				s.configuration.MasterVectorMutex.Lock()
-				s.configuration.MasterVector[c.params.currentClientHostname] = vec
-				s.configuration.MasterVectorMutex.Unlock()
+				s.configuration.MasterVectorSetElement(c.params.currentClientHostname, vec)
 				c.Send(fmt.Sprintf("%s ack set\n", okMsg))
 			} else {
 				c.Send(fmt.Sprintf("%s set vector\n", errMsg))

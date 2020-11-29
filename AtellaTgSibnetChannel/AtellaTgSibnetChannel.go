@@ -42,7 +42,7 @@ func (config *AtellaTgSibnetConfig) newTgSibnetMessage() *tgSibnetMessage {
 
 // Function initialize send message (text) via TgSibnet Channel to users,
 // specifying in to array in config. It is exportable function
-func (config *AtellaTgSibnetConfig) SendMessage(text string, hostname string) (bool,
+func (config *AtellaTgSibnetConfig) Send(text string, hostname string) (bool,
 	error) {
 	if config.Disabled {
 		return false, nil

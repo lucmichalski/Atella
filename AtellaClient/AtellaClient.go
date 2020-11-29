@@ -114,6 +114,11 @@ func (client *ServerClient) runNeighbour(c *neigbour) error {
 			if err != nil {
 				client.configuration.Logger.LogError(fmt.Sprintf("[Client] %s", err))
 				c.connError = true
+				vec = client.configuration.Vector[vectorIndex]
+				vec.Status = status
+				vec.Hostname = hostname
+				vec.Timestamp = time.Now().Unix()
+				client.configuration.Vector[vectorIndex] = vec
 			} else {
 				c.connError = false
 				connbuf = bufio.NewReader(c.conn)
@@ -434,7 +439,7 @@ func (c *ServerClient) runMasterClient() error {
 		if c.configuration.Agent.Master {
 			var vec []AtellaConfig.VectorType
 			json.Unmarshal(c.configuration.GetJsonVector(), &vec)
-			c.configuration.MasterVector[c.configuration.Agent.Hostname] = vec
+			c.configuration.MasterVectorSetElement(c.configuration.Agent.Hostname, vec)
 			continue
 		}
 

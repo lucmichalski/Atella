@@ -14,22 +14,15 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
+	"../AtellaGraphiteChannel"
 	"../AtellaLogger"
 	"../AtellaMailChannel"
 	"../AtellaTgSibnetChannel"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 )
-
-type VectorType struct {
-	Host      string   `json:"host"`
-	Hostname  string   `json:"hostname"`
-	Status    bool     `json:"status"`
-	Interval  int64    `json:"interval"`
-	Timestamp int64    `json:"timestamp"`
-	Sectors   []string `json:"sectors"`
-}
 
 var (
 	sectionDefaults = []string{"agent"}
@@ -107,11 +100,20 @@ type Config struct {
 	MasterServers            *MasterServersConfig       `json:"MasterServersSection"`
 	reporter                 reporter
 	Logger                   *AtellaLogger.AtellaLogger
-	Pid                      int
+	pid                      int
 	Vector                   []VectorType
-	MasterVector             map[string][]VectorType
-	MasterVectorMutex        sync.RWMutex
+	masterVector             map[string][]VectorType
+	masterVectorMutex        sync.RWMutex
 	CurrentMasterServerIndex int
+}
+
+type VectorType struct {
+	Host      string   `json:"host"`
+	Hostname  string   `json:"hostname"`
+	Status    bool     `json:"status"`
+	Interval  int64    `json:"interval"`
+	Timestamp int64    `json:"timestamp"`
+	Sectors   []string `json:"sectors"`
 }
 
 func NewConfig() *Config {
@@ -137,12 +139,11 @@ func NewConfig() *Config {
 		Channels:                 make(map[string]*ChannelsConfig),
 		Sectors:                  make([]*SectorsConfig, 0),
 		Logger:                   AtellaLogger.New(4, "stderr"),
-		Pid:                      0,
+		pid:                      0,
 		Vector:                   make([]VectorType, 0),
-		MasterVector:             make(map[string][]VectorType, 0),
-		MasterVectorMutex:        sync.RWMutex{},
+		masterVectorMutex:        sync.RWMutex{},
 		CurrentMasterServerIndex: 0}
-
+	local.MasterVectorInit()
 	local.reporter.stopReply = false
 	local.reporter.stopRequest = false
 	local.reporter.isLocked = false
@@ -163,7 +164,7 @@ func (c *Config) GetVectorByHost(host string) (*VectorType, int) {
 // Function save procces ID to file, specifyied as pidFilePath.
 func (c *Config) SavePid() {
 	var err error
-	c.Pid = os.Getpid()
+	c.pid = os.Getpid()
 
 	_, err = os.Stat(c.Agent.PidFile)
 	// Creating path to pid file if it not exist
@@ -220,9 +221,9 @@ func (c *Config) SavePid() {
 	defer procFile.Close()
 	defer pidFile.Close()
 	name := strings.Split(os.Args[0], "/")
-	pidFile.WriteString(fmt.Sprintf("%d", c.Pid))
+	pidFile.WriteString(fmt.Sprintf("%d", c.pid))
 	procFile.WriteString(fmt.Sprintf("%s", name[len(name)-1]))
-	c.Logger.LogSystem(fmt.Sprintf("Running with PID %d\n", c.Pid))
+	c.Logger.LogSystem(fmt.Sprintf("Running with PID %d\n", c.pid))
 }
 
 // Function get procces ID from file, specifyied as pidFilePath.
@@ -317,11 +318,57 @@ func (c *Config) PrintJsonMasterVector() {
 
 // Function return MasterVector as json format
 func (c *Config) GetJsonMasterVector() []byte {
-	c.MasterVectorMutex.RLock()
-	res, _ := json.Marshal(c.MasterVector)
-	c.MasterVectorMutex.RUnlock()
+	c.masterVectorMutex.RLock()
+	res, _ := json.Marshal(c.masterVector)
+	c.masterVectorMutex.RUnlock()
 
 	return res
+}
+
+// Function return MasterVector
+func (c *Config) GetMasterVector() map[string][]VectorType {
+	c.masterVectorMutex.RLock()
+	res := c.masterVector
+	c.masterVectorMutex.RUnlock()
+	return res
+}
+
+func (c *Config) MasterVectorSetElement(index string, vec []VectorType) {
+	c.masterVectorMutex.Lock()
+	currentTime := time.Now().Unix()
+	for i, _ := range vec {
+		vec[i].Timestamp = currentTime
+	}
+	c.masterVector[index] = vec
+	c.masterVectorMutex.Unlock()
+}
+
+func (c *Config) MasterVectorDelDeprecatedElement(host string, index int, limit int64) {
+	c.masterVectorMutex.Lock()
+	if index >= len(c.masterVector[host]) {
+		c.masterVectorMutex.Unlock()
+		return
+	}
+	c.masterVector[host] = append(c.masterVector[host][:index],
+		c.masterVector[host][index+1:]...)
+	c.masterVectorMutex.Unlock()
+}
+
+// Function init MasterVector
+func (c *Config) MasterVectorInit() {
+	c.MasterVectorLock()
+	c.masterVector = make(map[string][]VectorType, 0)
+	c.MasterVectorUnlock()
+}
+
+// Function lock MasterVector
+func (c *Config) MasterVectorLock() {
+	c.masterVectorMutex.Lock()
+}
+
+// Function unlock MasterVector
+func (c *Config) MasterVectorUnlock() {
+	c.masterVectorMutex.Unlock()
 }
 
 // Function add channel config into channels section
@@ -348,6 +395,14 @@ func (c *Config) addChannel(name string, table *ast.Table) error {
 			Password:   "password",
 			From:       "atella@hostname",
 			To:         make([]string, 0),
+			Disabled:   false,
+			NetTimeout: c.Agent.NetTimeout}
+
+	case "Graphite":
+		rp.Config = &AtellaGraphiteChannel.AtellaGraphiteConfig{
+			Address:    "localhost",
+			Port:       2003,
+			Prefix:     "",
 			Disabled:   false,
 			NetTimeout: c.Agent.NetTimeout}
 

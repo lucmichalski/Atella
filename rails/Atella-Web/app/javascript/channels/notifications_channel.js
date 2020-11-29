@@ -12,7 +12,7 @@ consumer.subscriptions.create("NotificationsChannel", {
   received(data) {
     // Called when there's incoming data on the websocket for this channel
     // document.getElementById("messages").append(data["message"])
-    if (data["action"] == "vectorUpdate") {
+    if (data["action"] == "tagUpdate") {
       document.getElementById(data["tagId"]).innerHTML = data["content"]
     }
   }

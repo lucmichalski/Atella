@@ -1,8 +1,15 @@
 package AtellaServer
 
 import (
+	"fmt"
+	"time"
+
 	"../AtellaConfig"
 )
+
+func (s *AtellaServer) MasterVectorToStateVector() error {
+	return nil
+}
 
 // Function impement master server logic
 func (s *AtellaServer) MasterServer() {
@@ -14,18 +21,34 @@ func (s *AtellaServer) MasterServer() {
 		return
 	}
 
-  var interrupt bool = false
+	var interrupt bool = false
 	go func() {
 		<-s.stopRequest
 		s.configuration.Logger.LogSystem("[Server] Stopping master server")
 		interrupt = true
 	}()
 
-	s.configuration.MasterVectorMutex.Lock()
-	s.configuration.MasterVector = make(map[string][]AtellaConfig.VectorType, 0)
-	s.configuration.MasterVectorMutex.Unlock()
+	s.configuration.MasterVectorInit()
+	go s.masterServerDropDeprecatedElements(&interrupt)
+
 	for !interrupt {
 		AtellaConfig.Pause(s.configuration.Agent.Interval, &interrupt)
 	}
 	s.CloseReplyMaster = true
+}
+
+func (s *AtellaServer) masterServerDropDeprecatedElements(interrupt *bool) {
+	for !*interrupt {
+		vector := s.configuration.GetMasterVector()
+		for v, el := range vector {
+			for index, i := range el {
+				timeLimit := i.Interval * 5
+				if i.Timestamp+timeLimit < time.Now().Unix() {
+					s.configuration.Logger.LogInfo(fmt.Sprintf("Removing element %d for %s\n", index, v))
+					s.configuration.MasterVectorDelDeprecatedElement(v, index, timeLimit)
+				}
+			}
+		}
+		AtellaConfig.Pause(60, interrupt)
+	}
 }

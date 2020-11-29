@@ -121,7 +121,7 @@ class Host < ApplicationRecord
         hostsList[_host[1]][:is_master] = true
         hostsList[_host[1]][:address] = _host[0]
         hostsList[_host[1]][:hostname] = _host[1]
-        hostsList[_host[1]][:sectors] = Array.new
+        hostsList[_host[1]][:sectors] = Array.new if hostsList[_host[1]][:sectors].nil?
       end
     end
 

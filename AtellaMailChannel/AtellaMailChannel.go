@@ -35,7 +35,7 @@ func (config *AtellaMailConfig) newMailMessage() *mailMessage {
 	return local
 }
 
-func (config *AtellaMailConfig) SendMessage(text string, hostname string) (bool, error) {
+func (config *AtellaMailConfig) Send(text string, hostname string) (bool, error) {
 	if config.Disabled {
 		return false, nil
 	}

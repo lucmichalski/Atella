@@ -19,7 +19,7 @@ import (
 type ChannelsConfig struct {
 	Channel string `json:"channel"`
 	Config  interface {
-		SendMessage(text string, hostname string) (bool,
+		Send(text string, hostname string) (bool,
 			error)
 	} `json:"config"`
 }
@@ -139,7 +139,7 @@ func (conf *Config) Send() {
 			target = strings.ToLower(m.Target)
 			if target == "tgsibnet" {
 				if conf.Channels["TgSibnet"] != nil {
-					res, err = conf.Channels["TgSibnet"].Config.SendMessage(
+					res, err = conf.Channels["TgSibnet"].Config.Send(
 						m.Message, conf.Agent.Hostname)
 					if err != nil {
 						conf.Logger.LogError(fmt.Sprintf("%s", err))
@@ -147,7 +147,7 @@ func (conf *Config) Send() {
 				}
 			} else if target == "mail" {
 				if conf.Channels["Mail"] != nil {
-					res, err = conf.Channels["Mail"].Config.SendMessage(
+					res, err = conf.Channels["Mail"].Config.Send(
 						m.Message, conf.Agent.Hostname)
 					if err != nil {
 						conf.Logger.LogError(fmt.Sprintf("%s", err))

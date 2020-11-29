@@ -77,7 +77,7 @@ namespace :agents do
         unless redisDataPretty.nil?
           redisDataPretty.gsub!('\\', '')
         end
-        ActionCable.server.broadcast("Notifications", { action: "vectorUpdate", tagId: "#{m.hostname}_content", content: redisDataPretty})
+        ActionCable.server.broadcast("Notifications", { action: "tagUpdate", tagId: "#{m.hostname}_content", content: redisDataPretty})
       end
     end
   end
