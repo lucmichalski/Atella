@@ -50,17 +50,9 @@ module ApplicationHelper
       end
       s.close
     rescue => v
-      status["status"] = v
+      status["status"] = nil
+      status["error"] = v
     end
     return status.to_json
-  end
-
-  def processVector(v)
-    _s = JSON.parse(v)
-    s = _s["status"]
-    # s.each do |i|
-    #   print "#{i}\n"
-    # end
-    return v
   end
 end

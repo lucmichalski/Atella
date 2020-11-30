@@ -24,23 +24,41 @@ namespace :agents do
 
   desc "Read database and processing status"
   task status: :environment do
-    settings = Rails.application.config.atella  
-    masters = Host.where(:is_master => true)
+    error = nil
+    settings = Rails.application.config.atella
+    
     redis = Redis.new(host: settings["atella"]["redisHost"])
-    redisVectors = Array.new
-    statuses = Hash.new
-    if masters.nil?
-      STDERR.print("[ERROR]: Not enouth masters!\n")
+    masters = Host.where(:is_master => true)
+    hosts = Host.all
+
+    if masters.nil? || redis.nil?
+      STDERR.print("[FATAL]: redis - #{redis.nil?}, masters - #{masters.nil?}\n") 
       return
     end
+
+    statusVector = Hash.new
+    redisVector = Array.new
+
     masters.each do |m|
-      _r = redis.get(m.hostname)
-      redisVectors.append(_r) unless _r.nil?
+      r = redis.get(m.hostname)
+      redisData = nil
+      redisData = JSON.parse(r) unless r.nil?
+      redisVector << redisData["status"] unless (redisData.nil? || redisData["status"].nil?)
     end
-    redisVectors.each do |v|
-      _s = JSON.parse(v)
-      s = _s["status"]
-      STDERR.print "#{s}\n"
+
+    redisVector.each do |master|
+      master.each do |client|
+        client[1].each do |vec|
+          statusVector[vec["hostname"]] = true if statusVector[vec["hostname"]].nil?
+          statusVector[vec["hostname"]] = vec["status"] && statusVector[vec["hostname"]]
+        end
+      end
+    end
+
+    hosts.each do |h| 
+      statusVector[h.hostname] = false if statusVector[h.hostname].nil?
+      h.status = statusVector[h.hostname]
+      h.save
     end
   end
 
@@ -49,7 +67,6 @@ namespace :agents do
     error = nil
     settings = Rails.application.config.atella  
     begin
-      mastersConfig = TOML.load_file(settings["atella"]["masterServersConfig"])
       securityConfig = TOML.load_file(settings["atella"]["securityConfig"])
     rescue => v
       @error = v
@@ -69,7 +86,6 @@ namespace :agents do
 
     masters.each do |m|
       vector = wrap_master_host(m.address, m.hostname, securityConfig)
-      vector = processVector(vector)
       redisVector = redis.get(m.hostname)
       unless vector.eql?(redisVector)
         redis.set(m.hostname, vector)

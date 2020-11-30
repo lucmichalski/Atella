@@ -29,7 +29,11 @@
             <%= host["is_master"] %>
           </div>
           <div class="divTableCell">
-            <%= "Not implemented" %>
+            <%- if host["status"].eql?(1) %>
+              true
+            <%- else %>
+              false
+            <%- end %>
           </div>
         </div>
       <%- end %>
