@@ -2,7 +2,6 @@ package AtellaClient
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
@@ -115,7 +114,7 @@ func (client *ServerClient) runNeighbour(c *neigbour) error {
 				client.configuration.Logger.LogError(fmt.Sprintf("[Client] %s", err))
 				c.connError = true
 				vec = client.configuration.Vector[vectorIndex]
-				vec.Status = status
+				vec.Status = false
 				vec.Hostname = hostname
 				vec.Timestamp = time.Now().Unix()
 				client.configuration.Vector[vectorIndex] = vec
@@ -437,9 +436,7 @@ func (c *ServerClient) runMasterClient() error {
 
 		// If i am a master server, save client vector to local master vector
 		if c.configuration.Agent.Master {
-			var vec []AtellaConfig.VectorType
-			json.Unmarshal(c.configuration.GetJsonVector(), &vec)
-			c.configuration.MasterVectorSetElement(c.configuration.Agent.Hostname, vec)
+			c.configuration.MasterVectorSetElement(c.configuration.Agent.Hostname, c.configuration.GetVector())
 			continue
 		}
 

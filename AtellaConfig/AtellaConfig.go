@@ -86,9 +86,12 @@ type SectorConfig struct {
 
 type reporter struct {
 	mux         sync.Mutex
+	muxCnt         sync.Mutex
+	firstRun    bool
 	isLocked    bool
 	stopRequest bool
 	stopReply   bool
+	messageCnt  int64
 }
 
 type Config struct {
@@ -146,7 +149,9 @@ func NewConfig() *Config {
 	local.MasterVectorInit()
 	local.reporter.stopReply = false
 	local.reporter.stopRequest = false
+	local.reporter.firstRun = true
 	local.reporter.isLocked = false
+	local.reporter.messageCnt = 0
 	return local
 }
 
@@ -310,6 +315,11 @@ func (c *Config) GetJsonVector() []byte {
 	return res
 }
 
+// Function return Vector
+func (c *Config) GetVector() []VectorType {
+	return c.Vector
+}
+
 // Function print MasterVector as json format
 func (c *Config) PrintJsonMasterVector() {
 	res := c.GetJsonMasterVector()
@@ -335,6 +345,10 @@ func (c *Config) GetMasterVector() map[string][]VectorType {
 
 func (c *Config) MasterVectorSetElement(index string, vec []VectorType) {
 	c.masterVectorMutex.Lock()
+	if len(vec) <= 0 {
+		c.masterVectorMutex.Unlock()
+		return
+	}
 	currentTime := time.Now().Unix()
 	for i, _ := range vec {
 		vec[i].Timestamp = currentTime
@@ -345,12 +359,17 @@ func (c *Config) MasterVectorSetElement(index string, vec []VectorType) {
 
 func (c *Config) MasterVectorDelDeprecatedElement(host string, index int, limit int64) {
 	c.masterVectorMutex.Lock()
-	if index >= len(c.masterVector[host]) {
+	l := len(c.masterVector[host])
+	if index >= l {
 		c.masterVectorMutex.Unlock()
 		return
 	}
-	c.masterVector[host] = append(c.masterVector[host][:index],
-		c.masterVector[host][index+1:]...)
+	if index > 0 {
+		c.masterVector[host] = append(c.masterVector[host][:index],
+			c.masterVector[host][index+1:]...)
+	} else {
+		delete(c.masterVector, host)
+	}
 	c.masterVectorMutex.Unlock()
 }
 

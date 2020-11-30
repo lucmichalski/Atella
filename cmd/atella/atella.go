@@ -3,10 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
+	"time"
 
 	"../../AtellaCli"
 	"../../AtellaClient"
@@ -58,9 +62,10 @@ func handle(c chan os.Signal) {
 		case "interrupt":
 			if !stop {
 				stop = true
-				server.Stop()
-				client.Stop()
-				conf.StopSender()
+				go server.Stop()
+				go client.Stop()
+				go conf.StopSender()
+				time.Sleep(2 * time.Second)
 			} else {
 				if conf != nil {
 					conf.Logger.LogSystem(fmt.Sprintf("[%s] Already in Progress",
@@ -117,6 +122,9 @@ func initFlags() {
 
 func main() {
 	var err error = nil
+	go func() {
+		log.Println(http.ListenAndServe("0.0.0.0:5224", nil))
+	}()
 	initFlags()
 	conf = AtellaConfig.NewConfig()
 	err = conf.LoadConfig(configFilePath)
@@ -161,7 +169,6 @@ func main() {
 	go server.MasterServer()
 
 	client = AtellaClient.New(conf)
-	go client.Run()
-
+	client.Run()
 	conf.Sender()
 }

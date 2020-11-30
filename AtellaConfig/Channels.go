@@ -92,7 +92,6 @@ func (conf *Config) Sender() {
 // Function call send-report mechanism. Use files created by Report function.
 func (conf *Config) Send() {
 	var (
-		err     error  = nil
 		message string = ""
 		target  string = ""
 		res     bool   = true
@@ -105,61 +104,66 @@ func (conf *Config) Send() {
 	conf.reporter.mux.Lock()
 	conf.reporter.isLocked = true
 	conf.Logger.LogInfo("Start sender iteration")
-	files, err := ioutil.ReadDir(conf.Agent.MessagePath)
-	if err != nil {
-		conf.Logger.LogError(fmt.Sprintf("%s", err))
-	}
-
-	for _, file := range files {
-		if !file.IsDir() && !strings.HasPrefix(file.Name(), ".") {
-			f, err := os.Open(fmt.Sprintf("%s/%s", conf.Agent.MessagePath,
-				file.Name()))
-			if err != nil {
-				conf.Logger.LogError(fmt.Sprintf("%s", err))
-				continue
-			}
-			data := make([]byte, file.Size())
-
-			for {
-				n, err := f.Read(data)
-				if err == io.EOF {
-					break
+	if conf.reporter.firstRun || conf.reporter.messageCnt > 0 {
+		files, err := ioutil.ReadDir(conf.Agent.MessagePath)
+		if err != nil {
+			conf.Logger.LogError(fmt.Sprintf("%s", err))
+		}
+		conf.reporter.firstRun = false
+		for _, file := range files {
+			if !file.IsDir() && !strings.HasPrefix(file.Name(), ".") {
+				f, err := os.Open(fmt.Sprintf("%s/%s", conf.Agent.MessagePath,
+					file.Name()))
+				if err != nil {
+					conf.Logger.LogError(fmt.Sprintf("%s", err))
+					continue
 				}
-				message = message + string(data[:n])
-			}
-			f.Close()
+				data := make([]byte, file.Size())
 
-			err = json.Unmarshal(data, &m)
-			if err != nil {
-				conf.Logger.LogError(fmt.Sprintf("%s", err))
-			}
-			conf.Logger.LogInfo(fmt.Sprintf("Read msg - %s [msg: %s|target: %s]",
-				file.Name(), m.Message, m.Target))
-
-			target = strings.ToLower(m.Target)
-			if target == "tgsibnet" {
-				if conf.Channels["TgSibnet"] != nil {
-					res, err = conf.Channels["TgSibnet"].Config.Send(
-						m.Message, conf.Agent.Hostname)
-					if err != nil {
-						conf.Logger.LogError(fmt.Sprintf("%s", err))
+				for {
+					n, err := f.Read(data)
+					if err == io.EOF {
+						break
 					}
+					message = message + string(data[:n])
 				}
-			} else if target == "mail" {
-				if conf.Channels["Mail"] != nil {
-					res, err = conf.Channels["Mail"].Config.Send(
-						m.Message, conf.Agent.Hostname)
-					if err != nil {
-						conf.Logger.LogError(fmt.Sprintf("%s", err))
-					}
-				}
-			} else {
-				conf.Logger.LogError(fmt.Sprintf("Unsopported channel - %s", target))
-				res = true
-			}
+				f.Close()
 
-			if res == true {
-				os.Remove(fmt.Sprintf("%s/%s", conf.Agent.MessagePath, file.Name()))
+				err = json.Unmarshal(data, &m)
+				if err != nil {
+					conf.Logger.LogError(fmt.Sprintf("%s", err))
+				}
+				conf.Logger.LogInfo(fmt.Sprintf("Read msg - %s [msg: %s|target: %s]",
+					file.Name(), m.Message, m.Target))
+
+				target = strings.ToLower(m.Target)
+				if target == "tgsibnet" {
+					if conf.Channels["TgSibnet"] != nil {
+						res, err = conf.Channels["TgSibnet"].Config.Send(
+							m.Message, conf.Agent.Hostname)
+						if err != nil {
+							conf.Logger.LogError(fmt.Sprintf("%s", err))
+						}
+					}
+				} else if target == "mail" {
+					if conf.Channels["Mail"] != nil {
+						res, err = conf.Channels["Mail"].Config.Send(
+							m.Message, conf.Agent.Hostname)
+						if err != nil {
+							conf.Logger.LogError(fmt.Sprintf("%s", err))
+						}
+					}
+				} else {
+					conf.Logger.LogError(fmt.Sprintf("Unsopported channel - %s", target))
+					res = true
+				}
+
+				if res == true {
+					conf.reporter.muxCnt.Lock()
+					conf.reporter.messageCnt = conf.reporter.messageCnt - 1
+					conf.reporter.muxCnt.Unlock()
+					os.Remove(fmt.Sprintf("%s/%s", conf.Agent.MessagePath, file.Name()))
+				}
 			}
 		}
 	}
@@ -206,5 +210,9 @@ func (conf *Config) Report(message string, target string) string {
 		conf.Logger.LogInfo(fmt.Sprintf("File - %s [msg: %s|target: %s]",
 			path, message, targets[i]))
 	}
+
+	conf.reporter.muxCnt.Lock()
+	conf.reporter.messageCnt = conf.reporter.messageCnt + 1
+	conf.reporter.muxCnt.Unlock()
 	return hash
 }

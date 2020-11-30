@@ -3,14 +3,16 @@ package AtellaConfig
 import "time"
 
 func Pause(interval int64, interrupt *bool) {
-	st := time.Now().Unix()
+	c := int64(0)
+	one := time.Duration(1) * time.Second
   for {
 		if *interrupt {
 			break
 		}
-		diff := time.Now().Unix() - st
-		if diff >= interval {
+		if c >= interval {
 			break
 		}
+		c = c + 1
+		time.Sleep(one)
 	}
 }

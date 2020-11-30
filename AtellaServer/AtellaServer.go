@@ -51,7 +51,7 @@ func (c *ServerClient) listen() {
 	c.Server.OnNewClient(c)
 	reader := bufio.NewReader(c.conn)
 	var exit = false
-	
+
 	go func() {
 		<-c.Server.stopRequest
 		exit = true
@@ -204,7 +204,7 @@ func (s *AtellaServer) OnNewMessage(c *ServerClient, message string) bool {
 			c.params.canTalk = true
 		} else {
 			s.configuration.Logger.LogInfo(fmt.Sprintf("[Server] Server receive [%s], failed auth",
-			msgMap[1]))
+				msgMap[1]))
 			c.Send(fmt.Sprintf("%s auth\n", errMsg))
 
 		}
